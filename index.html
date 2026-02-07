@@ -80,6 +80,7 @@
         const App = () => {
             // --- STATE ---
             const [user, setUser] = useState(null);
+            // Defaultní hodnoty jsou prázdná pole, aby aplikace nepadala při načítání nebo chybějících datech
             const [data, setData] = useState({ materials: [], config: [], users: [], news: [], progress: [], personalDocs: [] });
             const [loading, setLoading] = useState(false);
             const [loginError, setLoginError] = useState('');
@@ -152,10 +153,25 @@
                 try {
                     const res = await fetch(DEFAULT_API_URL, { method: 'POST', body: JSON.stringify({ action: 'getData' }) });
                     const json = await res.json();
+                    
                     if (json.error) throw new Error(json.error);
+                    
                     if (json.materials) json.materials.sort((a, b) => new Date(b.datum).getTime() - new Date(a.datum).getTime());
-                    setData(json);
-                } catch (e) { console.error(e); } 
+                    
+                    // BEZPEČNÉ NASTAVENÍ DAT - pokud backend nevrátí nějaké pole, použijeme prázdné pole []
+                    setData(prev => ({
+                        ...prev,
+                        materials: json.materials || [],
+                        users: json.users || [],
+                        config: json.config || [],
+                        news: json.news || [],
+                        progress: json.progress || [],
+                        personalDocs: json.personalDocs || [] // Zde byla chyba - pokud to backend nevrátil, bylo to undefined
+                    }));
+                } catch (e) { 
+                    console.error("Chyba načítání dat:", e);
+                    setToast("Chyba načítání dat");
+                } 
                 finally { setLoading(false); }
             };
 
@@ -173,7 +189,9 @@
                 fetch(DEFAULT_API_URL, { method: 'POST', body: JSON.stringify({ action: 'getData' }) })
                     .then(r => r.json())
                     .then(json => {
-                        const found = json.users.find(u => 
+                        // Kontrola existence users pole
+                        const usersList = json.users || [];
+                        const found = usersList.find(u => 
                             u.login.toLowerCase().trim() === loginInput.toLowerCase().trim() && 
                             String(u.pin).trim() === String(pinInput).trim()
                         );
@@ -181,7 +199,17 @@
                             const userData = { ...found, role: found.role === 'admin' ? 'admin' : 'user', typStudenta: found.typStudenta || 'interni' };
                             setUser(userData);
                             localStorage.setItem('domoskola_user', JSON.stringify(userData));
-                            setData(json);
+                            
+                            // Nastavíme data bezpečně
+                            setData({
+                                materials: json.materials || [],
+                                users: json.users || [],
+                                config: json.config || [],
+                                news: json.news || [],
+                                progress: json.progress || [],
+                                personalDocs: json.personalDocs || []
+                            });
+                            
                             if (found.mojeTrida) setActiveGrade(found.mojeTrida);
                         } else { setLoginError("Neplatné přihlašovací jméno nebo PIN."); }
                     })
@@ -532,7 +560,7 @@
                                         React.createElement('div', { className: "bg-white p-8 rounded-[2rem] border border-slate-200 shadow-sm" },
                                             React.createElement('h3', { className: "font-bold text-slate-900 uppercase text-xs mb-4" }, "Nahrané dokumenty"),
                                             React.createElement('div', { className: "space-y-2" },
-                                                data.personalDocs.filter(d => d.userLogin === selectedStudent.login).map(d => 
+                                                (data.personalDocs || []).filter(d => d.userLogin === selectedStudent.login).map(d => 
                                                     React.createElement('a', { key: d.id, href: d.url, target: "_blank", className: "flex items-center justify-between p-4 bg-slate-50 rounded-2xl hover:bg-slate-100 transition-colors group" },
                                                         React.createElement('div', { className: "flex items-center gap-3" },
                                                             React.createElement('div', { className: "bg-white p-2 rounded-xl border border-slate-200 text-indigo-500" }, React.createElement(FileText, { size: 18 })),
@@ -695,12 +723,12 @@
                                 ),
                                 React.createElement('button', { type: "submit", className: "w-full bg-blue-600 text-white py-4 rounded-2xl font-bold uppercase shadow-xl hover:bg-blue-700 transition-all mt-4" }, "Uložit nastavení")
                             ),
-                            // SEKCE MOJE HODNOCENÍ
+                            // SEKCE MOJE HODNOCENÍ - OPRAVENO (Safe check)
                             React.createElement('div', { className: "border-t border-slate-100 pt-6" },
                                 React.createElement('h3', { className: "font-bold text-blue-900 uppercase text-xs mb-4" }, "Moje hodnocení a dokumenty"),
                                 React.createElement('div', { className: "space-y-2" },
-                                    data.personalDocs.filter(d => d.userLogin === user.login).length > 0 ?
-                                    data.personalDocs.filter(d => d.userLogin === user.login).map(d => 
+                                    (data.personalDocs || []).filter(d => d.userLogin === user.login).length > 0 ?
+                                    (data.personalDocs || []).filter(d => d.userLogin === user.login).map(d => 
                                         React.createElement('a', { key: d.id, href: d.url, target: "_blank", className: "flex items-center justify-between p-4 bg-indigo-50 rounded-2xl border border-indigo-100 hover:bg-indigo-100 transition-colors group" },
                                             React.createElement('div', { className: "flex items-center gap-3" },
                                                 React.createElement('div', { className: "bg-white p-2 rounded-xl text-indigo-500" }, React.createElement(FileText, { size: 16 })),
