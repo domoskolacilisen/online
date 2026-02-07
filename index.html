@@ -142,8 +142,11 @@
             const [studentFilterClass, setStudentFilterClass] = useState("Vše");
             const [hideInactive, setHideInactive] = useState(false);
             
-            // Admin Edit Student State
-            const [adminStudentData, setAdminStudentData] = useState({ aktivni: 'ano', datumNastupu: '', datumUkonceni: '' });
+            // Admin Edit Student State (Expanded to include all profile fields)
+            const [adminStudentData, setAdminStudentData] = useState({ 
+                aktivni: 'ano', datumNastupu: '', datumUkonceni: '',
+                jmeno: '', login: '', pin: '', mojeTrida: '', typStudenta: 'interni', emailRodice: '', vek: '', kmenovaSkola: ''
+            });
 
             // Login State
             const [loginInput, setLoginInput] = useState('');
@@ -198,7 +201,15 @@
                     setAdminStudentData({
                         aktivni: selectedStudent.aktivni || 'ano',
                         datumNastupu: selectedStudent.datumNastupu || '',
-                        datumUkonceni: selectedStudent.datumUkonceni || ''
+                        datumUkonceni: selectedStudent.datumUkonceni || '',
+                        jmeno: selectedStudent.jmeno,
+                        login: selectedStudent.login, // Read only primarily
+                        pin: selectedStudent.pin,
+                        mojeTrida: selectedStudent.mojeTrida || '',
+                        typStudenta: selectedStudent.typStudenta || 'interni',
+                        vek: selectedStudent.vek || '',
+                        kmenovaSkola: selectedStudent.kmenovaSkola || '',
+                        emailRodice: selectedStudent.emailRodice || ''
                     });
                 }
             }, [selectedStudent]);
@@ -515,8 +526,12 @@
             const uniqueSubjects = ["Vše", ...data.config.filter(c => c.kategorie === 'Predmet').map(c => c.nazev).sort()];
             const uniqueTypes = ["Vše", ...data.config.filter(c => c.kategorie === 'Typ').map(c => c.nazev).sort()];
             
-            // Extract unique tags from all materials
-            const uniqueTags = ["Vše", ...new Set(data.materials.flatMap(m => m.tagy ? m.tagy.split(',').map(t => t.trim()) : []).filter(t => t !== ""))].sort();
+            // Extract unique tags from all materials AND config tags
+            const configTags = data.config.filter(c => c.kategorie === 'Tag').map(c => c.nazev);
+            const usedTags = data.materials.flatMap(m => m.tagy ? m.tagy.split(',').map(t => t.trim()) : []).filter(t => t !== "");
+            const allTagsRaw = [...new Set([...configTags, ...usedTags])].sort();
+            // Force Vše to be first
+            const uniqueTags = ["Vše", ...allTagsRaw.filter(t => t !== "Vše" && t !== "")];
             
             if (user && user.typStudenta === 'externi') {
                 uniqueGrades = user.mojeTrida ? [user.mojeTrida] : [];
@@ -682,8 +697,9 @@
                             
                             React.createElement('div', { className: "grid grid-cols-1 md:grid-cols-2 gap-8 pb-10 pt-4" },
                                 displayedMaterials.map(m => {
-                                    const color = getCardColor(m.predmet);
                                     const isGeneralMaterial = m.trida === GENERAL_INFO_LABEL;
+                                    // Pokud je to obecný materiál, použijeme hnědou barvu, jinak barvu předmětu
+                                    const color = isGeneralMaterial ? 'hneda' : getCardColor(m.predmet);
                                     
                                     const isInactiveForAdmin = user.role === 'admin' && m.status !== 'publikovano';
                                     const done = isDone(m.id);
@@ -817,12 +833,40 @@
                                         React.createElement('div', { className: "bg-white p-8 rounded-[2rem] border border-slate-200 shadow-sm" },
                                             React.createElement('h3', { className: "font-bold text-blue-900 uppercase text-xs mb-4" }, "Informace o žákovi"),
                                             React.createElement('div', { className: "grid grid-cols-2 gap-4 text-sm" },
-                                                React.createElement('div', null, React.createElement('div', { className: "text-slate-500 text-[10px] font-bold uppercase mb-1" }, "Login"), React.createElement('div', { className: "font-mono text-slate-800" }, selectedStudent.login)),
-                                                React.createElement('div', null, React.createElement('div', { className: "text-slate-500 text-[10px] font-bold uppercase mb-1" }, "PIN"), React.createElement('div', { className: "font-mono text-slate-800" }, selectedStudent.pin)),
-                                                React.createElement('div', null, React.createElement('div', { className: "text-slate-500 text-[10px] font-bold uppercase mb-1" }, "Třída"), React.createElement('div', { className: "text-slate-800" }, selectedStudent.mojeTrida || "-")),
-                                                React.createElement('div', null, React.createElement('div', { className: "text-slate-500 text-[10px] font-bold uppercase mb-1" }, "Typ"), React.createElement('div', { className: "text-slate-800" }, selectedStudent.typStudenta)),
-                                                React.createElement('div', null, React.createElement('div', { className: "text-slate-500 text-[10px] font-bold uppercase mb-1" }, "Věk"), React.createElement('div', { className: "text-slate-800" }, selectedStudent.vek || "-")),
-                                                React.createElement('div', null, React.createElement('div', { className: "text-slate-500 text-[10px] font-bold uppercase mb-1" }, "Kmenová škola"), React.createElement('div', { className: "text-slate-800" }, selectedStudent.kmenovaSkola || "-")),
+                                                React.createElement('div', null, 
+                                                    React.createElement('div', { className: "text-slate-500 text-[10px] font-bold uppercase mb-1" }, "Login (read-only)"), 
+                                                    React.createElement('div', { className: "font-mono text-slate-800 p-2 bg-slate-50 rounded-xl" }, adminStudentData.login)
+                                                ),
+                                                React.createElement('div', null, 
+                                                    React.createElement('label', { className: "text-slate-500 text-[10px] font-bold uppercase mb-1 block" }, "PIN"), 
+                                                    React.createElement('input', { value: adminStudentData.pin, onChange: e => setAdminStudentData({...adminStudentData, pin: e.target.value}), className: "w-full p-2 bg-slate-50 border rounded-xl" })
+                                                ),
+                                                React.createElement('div', null, 
+                                                    React.createElement('label', { className: "text-slate-500 text-[10px] font-bold uppercase mb-1 block" }, "Třída"), 
+                                                    React.createElement('select', { value: adminStudentData.mojeTrida, onChange: e => setAdminStudentData({...adminStudentData, mojeTrida: e.target.value}), className: "w-full p-2 bg-slate-50 border rounded-xl" },
+                                                        React.createElement('option', { value: "" }, "Vybrat..."),
+                                                        uniqueGrades.map(g => React.createElement('option', { key: g, value: g }, g))
+                                                    )
+                                                ),
+                                                React.createElement('div', null, 
+                                                    React.createElement('label', { className: "text-slate-500 text-[10px] font-bold uppercase mb-1 block" }, "Typ"), 
+                                                    React.createElement('select', { value: adminStudentData.typStudenta, onChange: e => setAdminStudentData({...adminStudentData, typStudenta: e.target.value}), className: "w-full p-2 bg-slate-50 border rounded-xl" },
+                                                        React.createElement('option', { value: "interni" }, "Interní"),
+                                                        React.createElement('option', { value: "externi" }, "Externí")
+                                                    )
+                                                ),
+                                                React.createElement('div', null, 
+                                                    React.createElement('label', { className: "text-slate-500 text-[10px] font-bold uppercase mb-1 block" }, "Věk"), 
+                                                    React.createElement('input', { type: "number", value: adminStudentData.vek, onChange: e => setAdminStudentData({...adminStudentData, vek: e.target.value}), className: "w-full p-2 bg-slate-50 border rounded-xl" })
+                                                ),
+                                                React.createElement('div', null, 
+                                                    React.createElement('label', { className: "text-slate-500 text-[10px] font-bold uppercase mb-1 block" }, "Kmenová škola"), 
+                                                    React.createElement('input', { value: adminStudentData.kmenovaSkola, onChange: e => setAdminStudentData({...adminStudentData, kmenovaSkola: e.target.value}), className: "w-full p-2 bg-slate-50 border rounded-xl" })
+                                                ),
+                                                React.createElement('div', { className: "col-span-2" }, 
+                                                    React.createElement('label', { className: "text-slate-500 text-[10px] font-bold uppercase mb-1 block" }, "Email rodiče"), 
+                                                    React.createElement('input', { type: "email", value: adminStudentData.emailRodice, onChange: e => setAdminStudentData({...adminStudentData, emailRodice: e.target.value}), className: "w-full p-2 bg-slate-50 border rounded-xl" })
+                                                ),
                                             )
                                         ),
                                         React.createElement('div', { className: "bg-white p-8 rounded-[2rem] border border-slate-200 shadow-sm" },
@@ -846,7 +890,7 @@
                                                     )
                                                 ),
                                                 React.createElement('button', { onClick: handleUpdateStudentDetails, disabled: loading, className: "w-full py-2 bg-blue-50 text-blue-600 font-bold uppercase text-[10px] rounded-xl hover:bg-blue-100 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed" }, 
-                                                    loading ? React.createElement(React.Fragment, null, React.createElement(Loader2, { className: "animate-spin w-4 h-4" }), "Ukládám...") : "Uložit administrativní údaje"
+                                                    loading ? React.createElement(React.Fragment, null, React.createElement(Loader2, { className: "animate-spin w-4 h-4" }), "Ukládám...") : "Uložit všechny údaje"
                                                 )
                                             )
                                         ),
@@ -943,7 +987,10 @@
                                             React.createElement('div', null,
                                                 React.createElement('label', { className: "text-[10px] font-bold uppercase text-slate-400 ml-2" }, "Kategorie"),
                                                 React.createElement('select', { value: configEditItem ? configEditItem.kategorie : newConfig.kategorie, onChange: e => configEditItem ? setConfigEditItem({...configEditItem, kategorie: e.target.value}) : setNewConfig({...newConfig, kategorie: e.target.value}), className: "w-full p-4 bg-slate-50 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-600" },
-                                                    React.createElement('option', { value: "Predmet" }, "Předmět"), React.createElement('option', { value: "Trida" }, "Třída"), React.createElement('option', { value: "Typ" }, "Typ dokumentu")
+                                                    React.createElement('option', { value: "Predmet" }, "Předmět"), 
+                                                    React.createElement('option', { value: "Trida" }, "Třída"), 
+                                                    React.createElement('option', { value: "Typ" }, "Typ dokumentu"),
+                                                    React.createElement('option', { value: "Tag" }, "Štítek (Tag)")
                                                 )
                                             ),
                                             React.createElement('div', null,
@@ -975,7 +1022,7 @@
                                         )
                                     ),
                                     React.createElement('div', { className: "bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm flex flex-col h-[500px]" },
-                                        React.createElement('h4', { className: "font-bold text-blue-900 uppercase text-[11px] mb-4 border-b pb-2" }, "Třídy a Typy"),
+                                        React.createElement('h4', { className: "font-bold text-blue-900 uppercase text-[11px] mb-4 border-b pb-2" }, "Třídy, Typy a Tagy"),
                                         React.createElement('div', { className: "flex-1 overflow-y-auto custom-scroll space-y-2 pr-2" },
                                             data.config.filter(c => c.kategorie !== 'Predmet').map(c => React.createElement('div', { key: c.nazev, className: "flex items-center justify-between p-3 bg-slate-50 rounded-2xl border border-slate-100" },
                                                 React.createElement('div', null, React.createElement('b', { className: "text-sm text-slate-700" }, c.nazev), React.createElement('br'), React.createElement('small', { className: "text-[9px] uppercase text-slate-400 font-bold" }, c.kategorie)),
@@ -988,6 +1035,10 @@
                                     )
                                 )
                             )
+                        ),
+                        // DATALIST FOR TAGS
+                        React.createElement('datalist', { id: "tag-suggestions" },
+                            uniqueTags.filter(t => t !== "Vše").map(t => React.createElement('option', { key: t, value: t }))
                         )
                     )
                 ),
@@ -1190,7 +1241,10 @@
                                     )
                                 )
                             ),
-                            React.createElement('div', null, React.createElement('label', { className: "text-[10px] font-bold uppercase text-slate-400 ml-2 block mb-1" }, "Tagy (#...)"), React.createElement('input', { value: uploadMeta.tagy, onChange: e => setUploadMeta({...uploadMeta, tagy: e.target.value}), placeholder: "geometrie, gramatika", className: "w-full p-4 bg-slate-50 border rounded-2xl outline-none" })),
+                            React.createElement('div', null, 
+                                React.createElement('label', { className: "text-[10px] font-bold uppercase text-slate-400 ml-2 block mb-1" }, "Tagy (#...)"), 
+                                React.createElement('input', { value: uploadMeta.tagy, onChange: e => setUploadMeta({...uploadMeta, tagy: e.target.value}), list: "tag-suggestions", placeholder: "geometrie, gramatika", className: "w-full p-4 bg-slate-50 border rounded-2xl outline-none" })
+                            ),
                             
                             React.createElement('button', { className: "w-full bg-emerald-600 text-white py-5 rounded-[2rem] font-bold uppercase shadow-xl hover:bg-emerald-700 transition-all mt-4 active:scale-95" }, "Publikovat do studovny")
                         )
@@ -1238,7 +1292,10 @@
                                     )
                                 )
                             ),
-                            React.createElement('div', null, React.createElement('label', { className: "text-[10px] font-bold uppercase text-slate-400 ml-2 block mb-1" }, "Tagy (#...)"), React.createElement('input', { value: showEditModal.tagy, onChange: e => setShowEditModal({...showEditModal, tagy: e.target.value}), className: "w-full p-4 bg-slate-50 border rounded-2xl text-sm outline-none" })),
+                            React.createElement('div', null, 
+                                React.createElement('label', { className: "text-[10px] font-bold uppercase text-slate-400 ml-2 block mb-1" }, "Tagy (#...)"), 
+                                React.createElement('input', { value: showEditModal.tagy, onChange: e => setShowEditModal({...showEditModal, tagy: e.target.value}), list: "tag-suggestions", className: "w-full p-4 bg-slate-50 border rounded-2xl text-sm outline-none" })
+                            ),
                             
                             React.createElement('div', { className: "pt-4 border-t border-slate-100" },
                                 React.createElement('label', { className: "text-[10px] font-bold uppercase text-red-400 ml-2 block mb-1" }, "Nahradit soubor (Volitelné)"),
