@@ -139,6 +139,7 @@
             const [showStudentModal, setShowStudentModal] = useState(false);
             const [newStudent, setNewStudent] = useState({ jmeno: '', login: '', pin: '', mojeTrida: '', typStudenta: 'interni', emailRodice: '', vek: '', kmenovaSkola: '' });
             const [studentFilterClass, setStudentFilterClass] = useState("Vše");
+            const [hideInactive, setHideInactive] = useState(false);
             
             // Admin Edit Student State
             const [adminStudentData, setAdminStudentData] = useState({ aktivni: 'ano', datumNastupu: '', datumUkonceni: '' });
@@ -712,17 +713,23 @@
                                     React.createElement('h2', { className: "text-3xl font-bold text-blue-900 uppercase flex items-center gap-3" },
                                         selectedStudent ? React.createElement(React.Fragment, null, React.createElement('button', { onClick: () => setSelectedStudent(null), className: "p-2 bg-white rounded-xl hover:bg-slate-100" }, React.createElement(ArrowLeft, { size: 24 })), selectedStudent.jmeno) : "Správa žáků"
                                     ),
-                                    !selectedStudent && React.createElement('button', { onClick: () => setShowStudentModal(true), className: "px-4 py-3 bg-blue-600 text-white rounded-xl text-[10px] font-bold uppercase shadow-lg hover:bg-blue-700 transition-all flex items-center gap-2 ml-4" }, React.createElement(UserPlus, { size: 16 }), "Přidat žáka"),
-                                    !selectedStudent && React.createElement('select', { value: studentFilterClass, onChange: e => setStudentFilterClass(e.target.value), className: "p-2 bg-white border border-blue-200 rounded-xl text-xs font-bold uppercase text-blue-600 outline-none ml-2" },
-                                        React.createElement('option', { value: "Vše" }, "Všechny třídy"),
-                                        uniqueGrades.map(g => React.createElement('option', { key: g, value: g }, g))
+                                    !selectedStudent && React.createElement(React.Fragment, null, 
+                                        React.createElement('button', { onClick: () => setShowStudentModal(true), className: "px-4 py-3 bg-blue-600 text-white rounded-xl text-[10px] font-bold uppercase shadow-lg hover:bg-blue-700 transition-all flex items-center gap-2 ml-4" }, React.createElement(UserPlus, { size: 16 }), "Přidat žáka"),
+                                        React.createElement('select', { value: studentFilterClass, onChange: e => setStudentFilterClass(e.target.value), className: "p-2 bg-white border border-blue-200 rounded-xl text-xs font-bold uppercase text-blue-600 outline-none ml-2" },
+                                            React.createElement('option', { value: "Vše" }, "Všechny třídy"),
+                                            uniqueGrades.map(g => React.createElement('option', { key: g, value: g }, g))
+                                        ),
+                                        React.createElement('label', { className: "flex items-center gap-2 cursor-pointer ml-4" },
+                                            React.createElement('input', { type: "checkbox", checked: hideInactive, onChange: e => setHideInactive(e.target.checked), className: "w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" }),
+                                            React.createElement('span', { className: "text-[10px] font-bold uppercase text-slate-500" }, "Skrýt neaktivní")
+                                        )
                                     )
                                 ),
                                 React.createElement('button', { onClick: () => setViewMode('portal'), className: "p-3 bg-slate-200 rounded-xl hover:bg-slate-300 transition-colors" }, React.createElement(X, { className: "w-5 h-5" }))
                             ),
                             !selectedStudent ? (
                                 React.createElement('div', { className: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" },
-                                    data.users.filter(u => u.role !== 'admin' && (studentFilterClass === "Vše" || u.mojeTrida === studentFilterClass)).map(u => {
+                                    data.users.filter(u => u.role !== 'admin' && (studentFilterClass === "Vše" || u.mojeTrida === studentFilterClass) && (!hideInactive || u.aktivni === 'ano')).map(u => {
                                         const isActive = u.aktivni === 'ano';
                                         return React.createElement('button', { key: u.login, onClick: () => setSelectedStudent(u), className: `bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 hover:shadow-lg hover:border-blue-200 transition-all text-left flex items-center gap-4 ${!isActive ? 'opacity-60 grayscale bg-slate-50' : ''}` },
                                             React.createElement('div', { className: `w-12 h-12 rounded-full flex items-center justify-center font-bold ${isActive ? 'bg-blue-50 text-blue-600' : 'bg-slate-200 text-slate-500'}` }, u.jmeno.charAt(0)),
@@ -733,7 +740,8 @@
                                                     u.mojeTrida ? `Třída: ${u.mojeTrida}` : '', 
                                                     u.mojeTrida && u.vek ? ' • ' : '', 
                                                     u.vek ? `Věk: ${u.vek}` : ''
-                                                )
+                                                ),
+                                                u.datumNastupu && React.createElement('div', { className: "text-[9px] text-slate-400 font-mono mt-1" }, `Nástup: ${new Date(u.datumNastupu).toLocaleDateString('cs-CZ')}`)
                                             ),
                                             React.createElement('div', { className: "ml-auto" }, 
                                                 !isActive ? React.createElement(EyeOff, { size: 16, className: "text-slate-400" }) :
@@ -776,7 +784,9 @@
                                                         React.createElement('input', { type: "date", value: adminStudentData.datumUkonceni, onChange: e => setAdminStudentData({...adminStudentData, datumUkonceni: e.target.value}), className: "w-full p-2 bg-slate-50 border rounded-xl text-sm" })
                                                     )
                                                 ),
-                                                React.createElement('button', { onClick: handleUpdateStudentDetails, className: "w-full py-2 bg-blue-50 text-blue-600 font-bold uppercase text-[10px] rounded-xl hover:bg-blue-100 transition-colors" }, "Uložit administrativní údaje")
+                                                React.createElement('button', { onClick: handleUpdateStudentDetails, disabled: loading, className: "w-full py-2 bg-blue-50 text-blue-600 font-bold uppercase text-[10px] rounded-xl hover:bg-blue-100 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed" }, 
+                                                    loading ? React.createElement(React.Fragment, null, React.createElement(Loader2, { className: "animate-spin w-4 h-4" }), "Ukládám...") : "Uložit administrativní údaje"
+                                                )
                                             )
                                         ),
                                         React.createElement('div', { className: "bg-white p-8 rounded-[2rem] border border-slate-200 shadow-sm" },
@@ -945,7 +955,7 @@
                                 )
                             ),
                             React.createElement('form', { onSubmit: handleProfileSave, className: "space-y-4 mb-8" },
-                                user.role !== 'admin' && React.createElement('div', null,
+                                user.role !== 'admin' && React.createElement(React.Fragment, null,
                                     user.typStudenta === 'externi' 
                                     ? React.createElement('div', { className: "bg-amber-50 p-4 rounded-2xl border border-amber-100 text-amber-700 text-xs text-center font-bold" }, "Jako externí student máte přiřazenou pevnou třídu: ", user.mojeTrida || "Nenastaveno")
                                     : React.createElement('div', null,
@@ -954,30 +964,30 @@
                                             React.createElement('option', { value: "" }, "Vybrat třídu..."),
                                             uniqueGrades.map(g => React.createElement('option', { key: g, value: g }, g))
                                         )
-                                    )
-                                ),
-                                React.createElement('div', null,
-                                    React.createElement('label', { className: "text-[10px] font-bold uppercase text-slate-400 ml-2 block mb-1" }, "E-mail rodiče"),
-                                    React.createElement('input', { type: "email", value: profileConfig.emailRodice, onChange: e => setProfileConfig({...profileConfig, emailRodice: e.target.value}), placeholder: "vas@email.cz", className: "w-full p-4 bg-slate-50 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-600" })
-                                ),
-                                React.createElement('div', { className: "grid grid-cols-2 gap-4" },
-                                    React.createElement('div', null,
-                                        React.createElement('label', { className: "text-[10px] font-bold uppercase text-slate-400 ml-2 block mb-1" }, "Věk (číslo)"),
-                                        React.createElement('input', { type: "number", value: profileConfig.vek, onChange: e => setProfileConfig({...profileConfig, vek: e.target.value}), className: "w-full p-4 bg-slate-50 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-600" })
                                     ),
                                     React.createElement('div', null,
-                                        React.createElement('label', { className: "text-[10px] font-bold uppercase text-slate-400 ml-2 block mb-1" }, "Kmenová škola"),
-                                        React.createElement('input', { type: "text", value: profileConfig.kmenovaSkola, onChange: e => setProfileConfig({...profileConfig, kmenovaSkola: e.target.value}), className: "w-full p-4 bg-slate-50 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-600" })
-                                    )
-                                ),
-                                React.createElement('div', { className: "grid grid-cols-2 gap-4" },
-                                    React.createElement('div', null,
-                                        React.createElement('label', { className: "text-[10px] font-bold uppercase text-slate-300 ml-2 block mb-1" }, "Datum nástupu"),
-                                        React.createElement('div', { className: "w-full p-4 bg-slate-50 border rounded-2xl text-sm text-slate-500 font-mono" }, user.datumNastupu || "-")
+                                        React.createElement('label', { className: "text-[10px] font-bold uppercase text-slate-400 ml-2 block mb-1" }, "E-mail rodiče"),
+                                        React.createElement('input', { type: "email", value: profileConfig.emailRodice, onChange: e => setProfileConfig({...profileConfig, emailRodice: e.target.value}), placeholder: "vas@email.cz", className: "w-full p-4 bg-slate-50 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-600" })
                                     ),
-                                    React.createElement('div', null,
-                                        React.createElement('label', { className: "text-[10px] font-bold uppercase text-slate-300 ml-2 block mb-1" }, "Datum ukončení"),
-                                        React.createElement('div', { className: "w-full p-4 bg-slate-50 border rounded-2xl text-sm text-slate-500 font-mono" }, user.datumUkonceni || "-")
+                                    React.createElement('div', { className: "grid grid-cols-2 gap-4" },
+                                        React.createElement('div', null,
+                                            React.createElement('label', { className: "text-[10px] font-bold uppercase text-slate-400 ml-2 block mb-1" }, "Věk (číslo)"),
+                                            React.createElement('input', { type: "number", value: profileConfig.vek, onChange: e => setProfileConfig({...profileConfig, vek: e.target.value}), className: "w-full p-4 bg-slate-50 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-600" })
+                                        ),
+                                        React.createElement('div', null,
+                                            React.createElement('label', { className: "text-[10px] font-bold uppercase text-slate-400 ml-2 block mb-1" }, "Kmenová škola"),
+                                            React.createElement('input', { type: "text", value: profileConfig.kmenovaSkola, onChange: e => setProfileConfig({...profileConfig, kmenovaSkola: e.target.value}), className: "w-full p-4 bg-slate-50 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-600" })
+                                        )
+                                    ),
+                                    React.createElement('div', { className: "grid grid-cols-2 gap-4" },
+                                        React.createElement('div', null,
+                                            React.createElement('label', { className: "text-[10px] font-bold uppercase text-slate-300 ml-2 block mb-1" }, "Datum nástupu"),
+                                            React.createElement('div', { className: "w-full p-4 bg-slate-50 border rounded-2xl text-sm text-slate-500 font-mono" }, user.datumNastupu || "-")
+                                        ),
+                                        React.createElement('div', null,
+                                            React.createElement('label', { className: "text-[10px] font-bold uppercase text-slate-300 ml-2 block mb-1" }, "Datum ukončení"),
+                                            React.createElement('div', { className: "w-full p-4 bg-slate-50 border rounded-2xl text-sm text-slate-500 font-mono" }, user.datumUkonceni || "-")
+                                        )
                                     )
                                 ),
                                 React.createElement('button', { type: "submit", className: "w-full bg-blue-600 text-white py-4 rounded-2xl font-bold uppercase shadow-xl hover:bg-blue-700 transition-all mt-4" }, "Uložit nastavení")
