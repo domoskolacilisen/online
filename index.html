@@ -27,9 +27,30 @@
         .btn-oranzova { background-color: #ea580c !important; }
         .btn-seda { background-color: #475569 !important; }
         
-        /* HOTOVÉ ÚKOLY - upraveno, aby zůstaly šedé i po hoveru */
-        .card-done { opacity: 0.6; filter: grayscale(100%); background-color: #f1f5f9; border-color: #e2e8f0; transition: all 0.3s; }
-        .card-done:hover { opacity: 0.8; } /* Jemné ztmavnutí, ale stále grayscale */
+        /* HOTOVÉ ÚKOLY (STUDENT) & NEAKTIVNÍ (ADMIN) */
+        /* Zrušen grayscale filter, abychom mohli barvit text na hover. Místo toho nastavujeme šedé barvy natvrdo. */
+        .card-done, .card-inactive { 
+            background-color: #f1f5f9; 
+            border-color: #e2e8f0; 
+            color: #94a3b8; /* slate-400 */
+        }
+        
+        /* Ztmavení textů uvnitř hotové karty */
+        .card-done h3, .card-inactive h3 { color: #64748b !important; /* slate-500 */ }
+        .card-done p, .card-inactive p { color: #94a3b8 !important; /* slate-400 */ }
+        
+        /* Tlačítko 'Otevřít' v hotové kartě zešedne */
+        .card-done .action-btn, .card-inactive .action-btn {
+            background-color: #cbd5e1 !important; /* slate-300 */
+            pointer-events: none; /* Volitelné: znemožnit kliknutí? Necháme asi aktivní, jen šedé */
+            pointer-events: auto; 
+        }
+
+        /* Hover efekt pro datum a status v hotové kartě */
+        .card-done:hover .done-info {
+            color: #059669 !important; /* emerald-600 */
+            transition: color 0.3s ease;
+        }
 
         /* ANIMACE */
         .animate-in { animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
@@ -70,7 +91,7 @@
             LogOut, Loader2, Save, Filter, Settings, Key, User,
             School, CheckCircle, Check, Layers, UploadCloud, Bell,
             UserCircle, LayoutGrid, FileCheck, Lock, Globe, Users,
-            ArrowLeft, FileOutput, ChevronDown, Eye, EyeOff
+            ArrowLeft, FileOutput, ChevronDown, Eye, EyeOff, CheckSquare, Square
         } from 'lucide-react';
 
         // --- KONFIGURACE ---
@@ -369,7 +390,9 @@
                  return data.materials.filter(m => {
                     // Portal View Logic
                     if (viewMode === 'portal') {
-                        if (m.status !== 'publikovano') return false;
+                        // Admin vidí vše (i neaktivní). Student vidí jen publikované.
+                        if (user.role !== 'admin' && m.status !== 'publikovano') return false;
+                        
                         if (user.typStudenta === 'externi') {
                             if (m.cilovaSkupina === 'interni') return false;
                             if (m.trida !== GENERAL_INFO_LABEL && m.trida !== user.mojeTrida) return false;
@@ -396,10 +419,15 @@
 
             const filteredMaterials = getFilteredMaterials().sort((a, b) => {
                 if (viewMode === 'portal') {
+                    // Řazení pro studenty: Hotové na konec
                     const aDone = isDone(a.id);
                     const bDone = isDone(b.id);
-                    if (aDone && !bDone) return 1;
-                    if (!aDone && bDone) return -1;
+                    // Pro admina se hotové neřeší (vždy nahoře podle data), nebo řeší?
+                    // Adminovi nebudeme řadit podle "hotovo", protože on si úkoly neplní.
+                    if (user.role !== 'admin') {
+                        if (aDone && !bDone) return 1;
+                        if (!aDone && bDone) return -1;
+                    }
                 }
                 return new Date(b.datum).getTime() - new Date(a.datum).getTime();
             });
@@ -491,13 +519,21 @@
                             React.createElement('div', { className: "grid grid-cols-1 md:grid-cols-2 gap-8 pb-10" },
                                 displayedMaterials.map(m => {
                                     const color = getCardColor(m.predmet);
+                                    
+                                    // Logika statusu pro Admina vs Studenta
+                                    const isInactiveForAdmin = user.role === 'admin' && m.status !== 'publikovano';
                                     const done = isDone(m.id);
                                     const doneDate = done ? getProgressDate(m.id) : null;
                                     
-                                    return React.createElement('div', { key: m.id, className: `${done ? 'card-done' : `card-${color}`} border-2 rounded-[2rem] p-8 hover:shadow-xl transition-all group flex flex-col justify-between relative` },
+                                    // Třída karty: Hotovo (Student) nebo Neaktivní (Admin)
+                                    const cardClass = isInactiveForAdmin 
+                                        ? 'card-inactive' 
+                                        : (done ? 'card-done' : `card-${color}`);
+
+                                    return React.createElement('div', { key: m.id, className: `${cardClass} border-2 rounded-[2rem] p-8 hover:shadow-xl transition-all group flex flex-col justify-between relative` },
                                         user.role === 'admin' && React.createElement('button', { onClick: () => setShowEditModal(m), className: "absolute top-4 right-4 p-2 bg-white/50 text-blue-600 rounded-xl hover:bg-white shadow-sm opacity-0 group-hover:opacity-100 transition-opacity z-10" }, React.createElement(Edit3, { className: "w-4 h-4" })),
                                         React.createElement('div', null,
-                                            // NOVÝ LAYOUT ZHLAVÍ KARTY (Štítky vedle sebe)
+                                            // Štítky
                                             React.createElement('div', { className: "flex flex-wrap gap-2 mb-6" },
                                                 React.createElement('span', { className: "px-3 py-1 text-[9px] font-bold uppercase rounded-full border border-current opacity-70 font-mono bg-white/50" }, m.predmet),
                                                 React.createElement('span', { className: "px-3 py-1 text-[9px] font-bold uppercase rounded-full border border-current opacity-70 font-mono bg-white/50" }, m.trida),
@@ -512,14 +548,23 @@
                                         React.createElement('div', { className: "pt-6 border-t border-white/50 flex flex-col gap-4" },
                                             React.createElement('div', { className: "flex justify-between text-[10px] font-bold text-slate-400 uppercase" },
                                                 React.createElement('span', null, new Date(m.datum).toLocaleDateString('cs-CZ')),
-                                                // Zobrazení HOTOVO + Datum
-                                                done && React.createElement('span', { className: "text-emerald-600 flex items-center gap-1" }, React.createElement(CheckCircle, { size: 12 }), "HOTOVO ", doneDate)
+                                                // Admin: status text, Student: Hotovo text (s hover efektem)
+                                                user.role === 'admin' ? 
+                                                    (m.status !== 'publikovano' && React.createElement('span', { className: "text-slate-400 flex items-center gap-1" }, React.createElement(EyeOff, { size: 12 }), "NEAKTIVNÍ"))
+                                                    : (done && React.createElement('span', { className: "done-info flex items-center gap-1" }, React.createElement(CheckCircle, { size: 12 }), "HOTOVO ", doneDate))
                                             ),
                                             React.createElement('div', { className: "flex gap-3" },
-                                                React.createElement('a', { href: m.odkaz, target: "_blank", rel: "noreferrer", className: `flex-1 flex items-center justify-center gap-3 text-white py-4 rounded-2xl text-[11px] font-bold uppercase shadow-lg active:scale-95 transition-transform btn-${color}` }, m.typ.includes('Video') ? React.createElement(Video, { size: 16 }) : React.createElement(FileText, { size: 16 }), " Otevřít"),
-                                                React.createElement('button', { onClick: () => handleToggleProgress(m.id), className: `min-w-[3.5rem] flex items-center justify-center rounded-2xl border-2 transition-all ${done ? 'bg-emerald-100 border-emerald-300 text-emerald-600' : 'bg-white border-slate-200 text-slate-300 hover:border-emerald-300 hover:text-emerald-500'}` }, 
-                                                    done ? React.createElement(Check, { size: 24 }) : React.createElement('span', { className: "w-4 h-4 rounded-full border-2 border-slate-200" })
-                                                )
+                                                // Tlačítko Otevřít
+                                                React.createElement('a', { href: m.odkaz, target: "_blank", rel: "noreferrer", className: `action-btn flex-1 flex items-center justify-center gap-3 text-white py-4 rounded-2xl text-[11px] font-bold uppercase shadow-lg active:scale-95 transition-transform btn-${color}` }, m.typ.includes('Video') ? React.createElement(Video, { size: 16 }) : React.createElement(FileText, { size: 16 }), " Otevřít"),
+                                                
+                                                // Tlačítko akce vpravo dole
+                                                user.role === 'admin' 
+                                                ? React.createElement('button', { onClick: () => handleAction('updateStatus', [m.id]), className: "min-w-[3.5rem] flex items-center justify-center rounded-2xl border-2 border-slate-200 bg-white text-slate-400 hover:text-blue-600 hover:border-blue-300 transition-all", title: "Změnit viditelnost" }, 
+                                                    m.status === 'publikovano' ? React.createElement(Eye, { size: 20 }) : React.createElement(EyeOff, { size: 20 })
+                                                  )
+                                                : React.createElement('button', { onClick: () => handleToggleProgress(m.id), className: `px-4 flex items-center justify-center gap-2 rounded-2xl border-2 transition-all font-bold uppercase text-[9px] ${done ? 'bg-emerald-100 border-emerald-300 text-emerald-600' : 'bg-white border-slate-200 text-slate-400 hover:border-blue-300 hover:text-blue-600'}` }, 
+                                                    done ? React.createElement(React.Fragment, null, React.createElement(CheckSquare, { size: 16 }), "Splněno") : React.createElement(React.Fragment, null, React.createElement(Square, { size: 16 }), "Označit")
+                                                  )
                                             )
                                         )
                                     );
@@ -756,8 +801,8 @@
                 ),
 
                 // PROFILE MODAL (NOVÉ)
-                showProfileModal && React.createElement('div', { className: "fixed inset-0 z-50 flex items-center justify-center p-6 modal-overlay" },
-                    React.createElement('div', { className: "bg-white rounded-[3.5rem] shadow-2xl w-full max-w-md p-10 animate-in relative flex flex-col max-h-[85vh]" },
+                showProfileModal && React.createElement('div', { className: "fixed inset-0 z-50 flex items-center justify-center p-6 modal-overlay", onClick: () => setShowProfileModal(false) },
+                    React.createElement('div', { className: "bg-white rounded-[3.5rem] shadow-2xl w-full max-w-md p-10 animate-in relative flex flex-col max-h-[85vh]", onClick: e => e.stopPropagation() },
                         React.createElement('div', { className: "flex justify-between items-center mb-8 shrink-0" },
                             React.createElement('h2', { className: "text-2xl font-bold text-blue-900 uppercase" }, "Můj profil"),
                             React.createElement('button', { onClick: () => setShowProfileModal(false), className: "text-slate-300 hover:text-slate-500 transition-all" }, React.createElement(X, { className: "w-8 h-8" }))
@@ -772,13 +817,15 @@
                                 )
                             ),
                             React.createElement('form', { onSubmit: handleProfileSave, className: "space-y-4 mb-8" },
-                                user.typStudenta === 'externi' 
-                                ? React.createElement('div', { className: "bg-amber-50 p-4 rounded-2xl border border-amber-100 text-amber-700 text-xs text-center font-bold" }, "Jako externí student máte přiřazenou pevnou třídu: ", user.mojeTrida || "Nenastaveno")
-                                : React.createElement('div', null,
-                                    React.createElement('label', { className: "text-[10px] font-bold uppercase text-slate-400 ml-2 block mb-1" }, "Moje třída (výchozí filtr)"),
-                                    React.createElement('select', { value: profileConfig.mojeTrida, onChange: e => setProfileConfig({...profileConfig, mojeTrida: e.target.value}), className: "w-full p-4 bg-slate-50 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-600" },
-                                        React.createElement('option', { value: "" }, "Vybrat třídu..."),
-                                        uniqueGrades.map(g => React.createElement('option', { key: g, value: g }, g))
+                                user.role !== 'admin' && React.createElement('div', null,
+                                    user.typStudenta === 'externi' 
+                                    ? React.createElement('div', { className: "bg-amber-50 p-4 rounded-2xl border border-amber-100 text-amber-700 text-xs text-center font-bold" }, "Jako externí student máte přiřazenou pevnou třídu: ", user.mojeTrida || "Nenastaveno")
+                                    : React.createElement('div', null,
+                                        React.createElement('label', { className: "text-[10px] font-bold uppercase text-slate-400 ml-2 block mb-1" }, "Moje třída (výchozí filtr)"),
+                                        React.createElement('select', { value: profileConfig.mojeTrida, onChange: e => setProfileConfig({...profileConfig, mojeTrida: e.target.value}), className: "w-full p-4 bg-slate-50 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-600" },
+                                            React.createElement('option', { value: "" }, "Vybrat třídu..."),
+                                            uniqueGrades.map(g => React.createElement('option', { key: g, value: g }, g))
+                                        )
                                     )
                                 ),
                                 React.createElement('div', null,
@@ -787,8 +834,8 @@
                                 ),
                                 React.createElement('button', { type: "submit", className: "w-full bg-blue-600 text-white py-4 rounded-2xl font-bold uppercase shadow-xl hover:bg-blue-700 transition-all mt-4" }, "Uložit nastavení")
                             ),
-                            // SEKCE MOJE HODNOCENÍ - SCROLLOVÁNÍ
-                            React.createElement('div', { className: "border-t border-slate-100 pt-6" },
+                            // SEKCE MOJE HODNOCENÍ - Skryto pro adminy
+                            user.role !== 'admin' && React.createElement('div', { className: "border-t border-slate-100 pt-6" },
                                 React.createElement('h3', { className: "font-bold text-blue-900 uppercase text-xs mb-4" }, "Moje hodnocení a dokumenty"),
                                 React.createElement('div', { className: "space-y-2 max-h-48 overflow-y-auto custom-scroll pr-2" },
                                     (data.personalDocs || []).filter(d => d.userLogin === user.login).length > 0 ?
@@ -811,8 +858,8 @@
                 ),
 
                 // NEWS MODAL
-                showNewsModal && React.createElement('div', { className: "fixed inset-0 z-50 flex items-center justify-center p-6 modal-overlay" },
-                    React.createElement('div', { className: "bg-white rounded-[3.5rem] shadow-2xl w-full max-w-2xl p-10 animate-in relative flex flex-col max-h-[85vh]" },
+                showNewsModal && React.createElement('div', { className: "fixed inset-0 z-50 flex items-center justify-center p-6 modal-overlay", onClick: () => setShowNewsModal(false) },
+                    React.createElement('div', { className: "bg-white rounded-[3.5rem] shadow-2xl w-full max-w-2xl p-10 animate-in relative flex flex-col max-h-[85vh]", onClick: e => e.stopPropagation() },
                         React.createElement('div', { className: "flex justify-between items-center mb-6" },
                             React.createElement('h2', { className: "text-2xl font-bold text-blue-900 uppercase" }, "Aktuality"),
                             React.createElement('button', { onClick: () => setShowNewsModal(false), className: "text-slate-300 hover:text-slate-500 transition-all" }, React.createElement(X, { className: "w-8 h-8" }))
@@ -833,8 +880,8 @@
                 ),
 
                 // UPLOAD MODAL
-                showUploadModal && React.createElement('div', { className: "fixed inset-0 z-50 flex items-center justify-center p-6 modal-overlay" },
-                    React.createElement('div', { className: "bg-white rounded-[3.5rem] shadow-2xl w-full max-w-xl p-12 animate-in relative overflow-hidden" },
+                showUploadModal && React.createElement('div', { className: "fixed inset-0 z-50 flex items-center justify-center p-6 modal-overlay", onClick: () => setShowUploadModal(false) },
+                    React.createElement('div', { className: "bg-white rounded-[3.5rem] shadow-2xl w-full max-w-xl p-12 animate-in relative overflow-hidden", onClick: e => e.stopPropagation() },
                         isUploading && React.createElement('div', { className: "absolute inset-0 bg-white/90 z-20 flex flex-col items-center justify-center text-blue-600 font-bold uppercase text-xs" },
                              React.createElement(Loader2, { className: "animate-spin w-8 h-8 mb-2" }), " Ukládám podklady..."
                         ),
@@ -897,10 +944,10 @@
                     )
                 ),
 
-                // EDIT MODAL
-                showEditModal && React.createElement('div', { className: "fixed inset-0 z-50 flex items-center justify-center p-6 modal-overlay" },
-                    React.createElement('div', { className: "bg-white rounded-[3.5rem] shadow-2xl w-full max-w-xl p-12 animate-in relative" },
-                        React.createElement('div', { className: "flex justify-between items-center mb-8" }, React.createElement('h2', { className: "text-2xl font-bold text-blue-900 uppercase" }, "Upravit informace"), React.createElement('button', { onClick: () => setShowEditModal(null), className: "text-slate-300 hover:text-red-500 transition-all" }, React.createElement(X, { className: "w-8 h-8" }))),
+                // EDIT MODAL - SCROLLING & CLICK OUTSIDE FIX
+                showEditModal && React.createElement('div', { className: "fixed inset-0 z-50 flex items-center justify-center p-6 modal-overlay", onClick: () => setShowEditModal(null) },
+                    React.createElement('div', { className: "bg-white rounded-[3.5rem] shadow-2xl w-full max-w-xl p-12 animate-in relative max-h-[85vh] overflow-y-auto custom-scroll", onClick: e => e.stopPropagation() },
+                        React.createElement('div', { className: "flex justify-between items-center mb-8 shrink-0" }, React.createElement('h2', { className: "text-2xl font-bold text-blue-900 uppercase" }, "Upravit informace"), React.createElement('button', { onClick: () => setShowEditModal(null), className: "text-slate-300 hover:text-red-500 transition-all" }, React.createElement(X, { className: "w-8 h-8" }))),
                         React.createElement('form', { onSubmit: (e) => { e.preventDefault(); handleAction('edit', [], { id: showEditModal.id, ...showEditModal }); }, className: "space-y-4 text-sm" },
                             React.createElement('div', null, React.createElement('label', { className: "text-[10px] font-bold uppercase text-slate-400 ml-2 block mb-1" }, "Název materiálu"), React.createElement('input', { value: showEditModal.nazev, onChange: e => setShowEditModal({...showEditModal, nazev: e.target.value}), className: "w-full p-4 bg-slate-50 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 transition-all" })),
                             React.createElement('div', null, React.createElement('label', { className: "text-[10px] font-bold uppercase text-slate-400 ml-2 block mb-1" }, "Popisek / Poznámka"), React.createElement('textarea', { value: showEditModal.poznamka, onChange: e => setShowEditModal({...showEditModal, poznamka: e.target.value}), className: "w-full p-4 bg-slate-50 border rounded-2xl h-24 outline-none focus:ring-2 focus:ring-blue-600 transition-all" })),
