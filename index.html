@@ -122,7 +122,8 @@
             // Student Management State
             const [selectedStudent, setSelectedStudent] = useState(null);
             const [showStudentModal, setShowStudentModal] = useState(false);
-            const [newStudent, setNewStudent] = useState({ jmeno: '', login: '', pin: '', mojeTrida: '', typStudenta: 'interni', emailRodice: '' });
+            const [newStudent, setNewStudent] = useState({ jmeno: '', login: '', pin: '', mojeTrida: '', typStudenta: 'interni', emailRodice: '', vek: '', kmenovaSkola: '' });
+            const [studentFilterClass, setStudentFilterClass] = useState("Vše");
 
             // Login State
             const [loginInput, setLoginInput] = useState('');
@@ -133,6 +134,9 @@
             const [uploadMeta, setUploadMeta] = useState({ nazev: '', poznamka: '', trida: '', predmet: '', typ: '', tagy: '', cilovaSkupina: 'all' });
             const [isUploading, setIsUploading] = useState(false);
 
+            // Edit State (File Replacement)
+            const [editFile, setEditFile] = useState(null);
+
             // Upload State (Personal Docs)
             const [personalUploadFile, setPersonalUploadFile] = useState(null);
             const [personalUploadName, setPersonalUploadName] = useState('');
@@ -142,7 +146,7 @@
             const [newConfig, setNewConfig] = useState({kategorie: 'Predmet', nazev: '', hodnota: 'seda'});
 
             // User Profile State
-            const [profileConfig, setProfileConfig] = useState({ mojeTrida: '', emailRodice: '' });
+            const [profileConfig, setProfileConfig] = useState({ mojeTrida: '', emailRodice: '', vek: '', kmenovaSkola: '' });
 
 
             // --- INIT ---
@@ -154,7 +158,12 @@
             useEffect(() => {
                 if (user) {
                     loadData();
-                    setProfileConfig({ mojeTrida: user.mojeTrida || '', emailRodice: user.emailRodice || '' });
+                    setProfileConfig({ 
+                        mojeTrida: user.mojeTrida || '', 
+                        emailRodice: user.emailRodice || '',
+                        vek: user.vek || '',
+                        kmenovaSkola: user.kmenovaSkola || ''
+                    });
                     if (user.typStudenta === 'externi' && user.mojeTrida) {
                         setActiveGrade(user.mojeTrida);
                     } else if (user.mojeTrida) {
@@ -264,7 +273,7 @@
                     
                     setToast("Žák úspěšně vytvořen");
                     setShowStudentModal(false);
-                    setNewStudent({ jmeno: '', login: '', pin: '', mojeTrida: '', typStudenta: 'interni', emailRodice: '' });
+                    setNewStudent({ jmeno: '', login: '', pin: '', mojeTrida: '', typStudenta: 'interni', emailRodice: '', vek: '', kmenovaSkola: '' });
                     loadData();
                 } catch(err) {
                     alert("Chyba: " + err.message);
@@ -345,12 +354,38 @@
                 } else if (action === 'edit') {
                     setData(prev => ({ ...prev, materials: prev.materials.map(m => m.id === extraData.id ? {...m, ...extraData} : m) }));
                     setShowEditModal(null);
+                    setEditFile(null); // Reset file
                 }
                 try {
                     await fetch(DEFAULT_API_URL, { method: 'POST', body: JSON.stringify({ action, ids, ...extraData }) });
                     setToast("Změny uloženy");
                 } catch (e) { alert("Chyba akce"); } 
                 finally { setProcessingIds(prev => prev.filter(pid => !ids.includes(pid))); }
+            };
+
+            const handleEditSubmit = async (e) => {
+                e.preventDefault();
+                let extraData = { id: showEditModal.id, ...showEditModal };
+                
+                // Pokud je vybrán nový soubor, načteme ho
+                if (editFile) {
+                    setIsUploading(true); // Re-use uploading spinner logic if needed or local loading
+                    const reader = new FileReader();
+                    reader.onload = async () => {
+                        const base64String = reader.result.split(',')[1];
+                        extraData = { 
+                            ...extraData, 
+                            base64: base64String, 
+                            filename: editFile.name, 
+                            mimeType: editFile.type 
+                        };
+                        await handleAction('edit', [], extraData);
+                        setIsUploading(false);
+                    };
+                    reader.readAsDataURL(editFile);
+                } else {
+                    handleAction('edit', [], extraData);
+                }
             };
 
             const handleConfigSave = async (e) => {
@@ -579,22 +614,31 @@
                         // STUDENTS MANAGEMENT VIEW
                         viewMode === 'students' && React.createElement('div', { className: "animate-in h-full flex flex-col" },
                              React.createElement('div', { className: "flex items-center justify-between mb-8" },
-                                React.createElement('h2', { className: "text-3xl font-bold text-blue-900 uppercase flex items-center gap-3" },
-                                    selectedStudent ? React.createElement(React.Fragment, null, React.createElement('button', { onClick: () => setSelectedStudent(null), className: "p-2 bg-white rounded-xl hover:bg-slate-100" }, React.createElement(ArrowLeft, { size: 24 })), selectedStudent.jmeno) : "Správa žáků"
+                                React.createElement('div', { className: "flex items-center gap-4" },
+                                    React.createElement('h2', { className: "text-3xl font-bold text-blue-900 uppercase flex items-center gap-3" },
+                                        selectedStudent ? React.createElement(React.Fragment, null, React.createElement('button', { onClick: () => setSelectedStudent(null), className: "p-2 bg-white rounded-xl hover:bg-slate-100" }, React.createElement(ArrowLeft, { size: 24 })), selectedStudent.jmeno) : "Správa žáků"
+                                    ),
+                                    !selectedStudent && React.createElement('button', { onClick: () => setShowStudentModal(true), className: "px-4 py-3 bg-blue-600 text-white rounded-xl text-[10px] font-bold uppercase shadow-lg hover:bg-blue-700 transition-all flex items-center gap-2 ml-4" }, React.createElement(UserPlus, { size: 16 }), "Přidat žáka"),
+                                    !selectedStudent && React.createElement('select', { value: studentFilterClass, onChange: e => setStudentFilterClass(e.target.value), className: "p-2 bg-white border border-blue-200 rounded-xl text-xs font-bold uppercase text-blue-600 outline-none ml-2" },
+                                        React.createElement('option', { value: "Vše" }, "Všechny třídy"),
+                                        uniqueGrades.map(g => React.createElement('option', { key: g, value: g }, g))
+                                    )
                                 ),
-                                React.createElement('div', { className: "flex gap-2" },
-                                    !selectedStudent && React.createElement('button', { onClick: () => setShowStudentModal(true), className: "px-4 py-3 bg-blue-600 text-white rounded-xl text-[10px] font-bold uppercase shadow-lg hover:bg-blue-700 transition-all flex items-center gap-2" }, React.createElement(UserPlus, { size: 16 }), "Přidat žáka"),
-                                    React.createElement('button', { onClick: () => setViewMode('portal'), className: "p-3 bg-slate-200 rounded-xl hover:bg-slate-300 transition-colors" }, React.createElement(X, { className: "w-5 h-5" }))
-                                )
+                                React.createElement('button', { onClick: () => setViewMode('portal'), className: "p-3 bg-slate-200 rounded-xl hover:bg-slate-300 transition-colors" }, React.createElement(X, { className: "w-5 h-5" }))
                             ),
                             !selectedStudent ? (
                                 React.createElement('div', { className: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" },
-                                    data.users.filter(u => u.role !== 'admin').map(u => 
+                                    data.users.filter(u => u.role !== 'admin' && (studentFilterClass === "Vše" || u.mojeTrida === studentFilterClass)).map(u => 
                                         React.createElement('button', { key: u.login, onClick: () => setSelectedStudent(u), className: "bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 hover:shadow-lg hover:border-blue-200 transition-all text-left flex items-center gap-4" },
                                             React.createElement('div', { className: "w-12 h-12 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-bold" }, u.jmeno.charAt(0)),
                                             React.createElement('div', null,
                                                 React.createElement('div', { className: "font-bold text-slate-800" }, u.jmeno),
-                                                React.createElement('div', { className: "text-xs text-slate-400 font-mono" }, u.login)
+                                                React.createElement('div', { className: "text-xs text-slate-400 font-mono" }, u.login),
+                                                React.createElement('div', { className: "text-[10px] text-slate-500 mt-1 font-bold" }, 
+                                                    u.mojeTrida ? `Třída: ${u.mojeTrida}` : '', 
+                                                    u.mojeTrida && u.vek ? ' • ' : '', 
+                                                    u.vek ? `Věk: ${u.vek}` : ''
+                                                )
                                             ),
                                             React.createElement('div', { className: "ml-auto" }, 
                                                 u.typStudenta === 'externi' ? React.createElement(Lock, { size: 16, className: "text-amber-400" }) : React.createElement(Globe, { size: 16, className: "text-purple-400" })
@@ -612,6 +656,8 @@
                                                 React.createElement('div', null, React.createElement('div', { className: "text-slate-400 text-[10px] uppercase font-bold" }, "PIN"), React.createElement('div', null, selectedStudent.pin)),
                                                 React.createElement('div', null, React.createElement('div', { className: "text-slate-400 text-[10px] uppercase font-bold" }, "Třída"), React.createElement('div', null, selectedStudent.mojeTrida || "-")),
                                                 React.createElement('div', null, React.createElement('div', { className: "text-slate-400 text-[10px] uppercase font-bold" }, "Typ"), React.createElement('div', null, selectedStudent.typStudenta)),
+                                                React.createElement('div', null, React.createElement('div', { className: "text-slate-400 text-[10px] uppercase font-bold" }, "Věk"), React.createElement('div', null, selectedStudent.vek || "-")),
+                                                React.createElement('div', null, React.createElement('div', { className: "text-slate-400 text-[10px] uppercase font-bold" }, "Kmenová škola"), React.createElement('div', null, selectedStudent.kmenovaSkola || "-")),
                                             )
                                         ),
                                         React.createElement('div', { className: "bg-white p-8 rounded-[2rem] border border-slate-200 shadow-sm" },
@@ -834,6 +880,16 @@
                                     React.createElement('label', { className: "text-[10px] font-bold uppercase text-slate-400 ml-2 block mb-1" }, "E-mail rodiče"),
                                     React.createElement('input', { type: "email", value: profileConfig.emailRodice, onChange: e => setProfileConfig({...profileConfig, emailRodice: e.target.value}), placeholder: "vas@email.cz", className: "w-full p-4 bg-slate-50 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-600" })
                                 ),
+                                React.createElement('div', { className: "grid grid-cols-2 gap-4" },
+                                    React.createElement('div', null,
+                                        React.createElement('label', { className: "text-[10px] font-bold uppercase text-slate-400 ml-2 block mb-1" }, "Věk (číslo)"),
+                                        React.createElement('input', { type: "number", value: profileConfig.vek, onChange: e => setProfileConfig({...profileConfig, vek: e.target.value}), className: "w-full p-4 bg-slate-50 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-600" })
+                                    ),
+                                    React.createElement('div', null,
+                                        React.createElement('label', { className: "text-[10px] font-bold uppercase text-slate-400 ml-2 block mb-1" }, "Kmenová škola"),
+                                        React.createElement('input', { type: "text", value: profileConfig.kmenovaSkola, onChange: e => setProfileConfig({...profileConfig, kmenovaSkola: e.target.value}), className: "w-full p-4 bg-slate-50 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-600" })
+                                    )
+                                ),
                                 React.createElement('button', { type: "submit", className: "w-full bg-blue-600 text-white py-4 rounded-2xl font-bold uppercase shadow-xl hover:bg-blue-700 transition-all mt-4" }, "Uložit nastavení")
                             ),
                             user.role !== 'admin' && React.createElement('div', { className: "border-t border-slate-100 pt-6" },
@@ -896,6 +952,16 @@
                                     )
                                 )
                             ),
+                            React.createElement('div', { className: "grid grid-cols-2 gap-4" },
+                                React.createElement('div', null,
+                                    React.createElement('label', { className: "text-[10px] font-bold uppercase text-slate-400 ml-2 block mb-1" }, "Věk (číslo)"),
+                                    React.createElement('input', { type: "number", value: newStudent.vek, onChange: e => setNewStudent({...newStudent, vek: e.target.value}), className: "w-full p-4 bg-slate-50 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-600" })
+                                ),
+                                React.createElement('div', null,
+                                    React.createElement('label', { className: "text-[10px] font-bold uppercase text-slate-400 ml-2 block mb-1" }, "Kmenová škola"),
+                                    React.createElement('input', { value: newStudent.kmenovaSkola, onChange: e => setNewStudent({...newStudent, kmenovaSkola: e.target.value}), className: "w-full p-4 bg-slate-50 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-600" })
+                                )
+                            ),
                             React.createElement('div', null,
                                 React.createElement('label', { className: "text-[10px] font-bold uppercase text-slate-400 ml-2 block mb-1" }, "E-mail rodiče (nepovinné)"),
                                 React.createElement('input', { type: "email", value: newStudent.emailRodice, onChange: e => setNewStudent({...newStudent, emailRodice: e.target.value}), className: "w-full p-4 bg-slate-50 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-600" })
@@ -956,7 +1022,7 @@
                                     React.createElement('label', { className: "text-[10px] font-bold uppercase text-slate-400 ml-2 block mb-1" }, "Třída"),
                                     React.createElement('select', { value: uploadMeta.trida, onChange: e => setUploadMeta({...uploadMeta, trida: e.target.value}), required: true, className: "w-full p-4 bg-slate-50 border rounded-2xl outline-none" },
                                         React.createElement('option', { value: "", disabled: true }, "Vybrat"),
-                                        React.createElement('option', { value: GENERAL_INFO_LABEL }, GENERAL_INFO_LABEL),
+                                        React.createElement('option', { value: GENERAL_INFO_LABEL, className: "text-blue-600 font-bold" }, `📌 ${GENERAL_INFO_LABEL} (Školní materiály)`),
                                         data.config.filter(c => c.kategorie === 'Trida').map(c => c.nazev).sort().map(g => React.createElement('option', { key: g }, g))
                                     )
                                 ),
@@ -995,8 +1061,11 @@
                 // EDIT MODAL
                 showEditModal && React.createElement('div', { className: "fixed inset-0 z-50 flex items-center justify-center p-6 modal-overlay", onClick: () => setShowEditModal(null) },
                     React.createElement('div', { className: "bg-white rounded-[3.5rem] shadow-2xl w-full max-w-xl p-12 animate-in relative max-h-[85vh] overflow-y-auto custom-scroll", onClick: e => e.stopPropagation() },
+                        isUploading && React.createElement('div', { className: "absolute inset-0 bg-white/90 z-20 flex flex-col items-center justify-center text-blue-600 font-bold uppercase text-xs" },
+                             React.createElement(Loader2, { className: "animate-spin w-8 h-8 mb-2" }), " Aktualizuji..."
+                        ),
                         React.createElement('div', { className: "flex justify-between items-center mb-8 shrink-0" }, React.createElement('h2', { className: "text-2xl font-bold text-blue-900 uppercase" }, "Upravit informace"), React.createElement('button', { onClick: () => setShowEditModal(null), className: "text-slate-300 hover:text-red-500 transition-all" }, React.createElement(X, { className: "w-8 h-8" }))),
-                        React.createElement('form', { onSubmit: (e) => { e.preventDefault(); handleAction('edit', [], { id: showEditModal.id, ...showEditModal }); }, className: "space-y-4 text-sm" },
+                        React.createElement('form', { onSubmit: handleEditSubmit, className: "space-y-4 text-sm" },
                             React.createElement('div', null, React.createElement('label', { className: "text-[10px] font-bold uppercase text-slate-400 ml-2 block mb-1" }, "Název materiálu"), React.createElement('input', { value: showEditModal.nazev, onChange: e => setShowEditModal({...showEditModal, nazev: e.target.value}), className: "w-full p-4 bg-slate-50 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 transition-all" })),
                             React.createElement('div', null, React.createElement('label', { className: "text-[10px] font-bold uppercase text-slate-400 ml-2 block mb-1" }, "Popisek / Poznámka"), React.createElement('textarea', { value: showEditModal.poznamka, onChange: e => setShowEditModal({...showEditModal, poznamka: e.target.value}), className: "w-full p-4 bg-slate-50 border rounded-2xl h-24 outline-none focus:ring-2 focus:ring-blue-600 transition-all" })),
                              React.createElement('div', { className: "grid grid-cols-2 gap-4" },
@@ -1032,6 +1101,18 @@
                             ),
                             React.createElement('div', null, React.createElement('label', { className: "text-[10px] font-bold uppercase text-slate-400 ml-2 block mb-1" }, "Tagy (#...)"), React.createElement('input', { value: showEditModal.tagy, onChange: e => setShowEditModal({...showEditModal, tagy: e.target.value}), className: "w-full p-4 bg-slate-50 border rounded-2xl text-sm outline-none" })),
                             
+                            React.createElement('div', { className: "pt-4 border-t border-slate-100" },
+                                React.createElement('label', { className: "text-[10px] font-bold uppercase text-red-400 ml-2 block mb-1" }, "Nahradit soubor (Volitelné)"),
+                                React.createElement('div', { className: "relative" },
+                                    React.createElement('input', { type: "file", onChange: e => setEditFile(e.target.files ? e.target.files[0] : null), className: "hidden", id: "file-edit-upload" }),
+                                    React.createElement('label', { htmlFor: "file-edit-upload", className: "w-full p-3 bg-red-50 border border-dashed border-red-200 rounded-2xl flex items-center justify-center gap-3 text-slate-500 cursor-pointer hover:bg-red-100 transition-colors" },
+                                        React.createElement(UploadCloud, { className: "w-4 h-4 text-red-400" }),
+                                        editFile ? React.createElement('span', { className: "text-red-600 font-bold" }, editFile.name) : "Nahrát novou verzi..."
+                                    )
+                                ),
+                                React.createElement('p', { className: "text-[9px] text-slate-400 mt-1 ml-2" }, "Původní soubor zůstane na disku, ale odkaz v kartě se aktualizuje. Vazba na žáky (splněno) zůstane zachována.")
+                            ),
+
                             React.createElement('button', { className: "w-full bg-blue-600 text-white py-5 rounded-[2rem] font-bold uppercase shadow-xl hover:bg-blue-700 transition-all mt-4" }, "Uložit změny")
                         )
                     )
