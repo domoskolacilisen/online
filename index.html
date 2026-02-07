@@ -98,7 +98,7 @@
             School, CheckCircle, Check, Layers, UploadCloud, Bell,
             UserCircle, LayoutGrid, FileCheck, Lock, Globe, Users,
             ArrowLeft, FileOutput, ChevronDown, Eye, EyeOff, CheckSquare, Square, UserPlus,
-            ToggleLeft, ToggleRight
+            ToggleLeft, ToggleRight, Tag
         } from 'lucide-react';
 
         // --- KONFIGURACE ---
@@ -123,6 +123,7 @@
             
             // New Filter States
             const [filterType, setFilterType] = useState("Vše");
+            const [filterTag, setFilterTag] = useState("Vše");
             const [filterClassAdditional, setFilterClassAdditional] = useState("Vše");
 
             const [selectedItems, setSelectedItems] = useState([]);
@@ -204,7 +205,7 @@
 
             useEffect(() => {
                 setVisibleItems(ITEMS_PER_PAGE);
-            }, [activeGrade, activeSubject, searchQuery, filterType, filterClassAdditional]);
+            }, [activeGrade, activeSubject, searchQuery, filterType, filterTag, filterClassAdditional]);
 
             useEffect(() => {
                 if (toast) {
@@ -484,11 +485,20 @@
                 if (month >= 9) return `${year}/${year + 1}`; // Sep-Dec
                 return `${year - 1}/${year}`; // Jan-Aug
             };
+            
+            const formatDateCZ = (isoString) => {
+                if (!isoString) return "-";
+                // Bere string yyyy-MM-dd a jen ho přeformátuje, ignoruje timezony
+                const parts = isoString.split('-');
+                if (parts.length !== 3) return isoString;
+                return `${parseInt(parts[2])}. ${parseInt(parts[1])}. ${parts[0]}`;
+            };
 
             const handleHomeClick = () => {
                 if (user.mojeTrida) setActiveGrade(user.mojeTrida); else setActiveGrade("Vše");
                 setSearchQuery("");
                 setFilterType("Vše");
+                setFilterTag("Vše");
                 setFilterClassAdditional("Vše");
                 setViewMode('portal');
             };
@@ -497,6 +507,9 @@
             let uniqueGrades = [...data.config.filter(c => c.kategorie === 'Trida').map(c => c.nazev).sort()];
             const uniqueSubjects = ["Vše", ...data.config.filter(c => c.kategorie === 'Predmet').map(c => c.nazev).sort()];
             const uniqueTypes = ["Vše", ...data.config.filter(c => c.kategorie === 'Typ').map(c => c.nazev).sort()];
+            
+            // Extract unique tags from all materials
+            const uniqueTags = ["Vše", ...new Set(data.materials.flatMap(m => m.tagy ? m.tagy.split(',').map(t => t.trim()) : []).filter(t => t !== ""))].sort();
             
             if (user && user.typStudenta === 'externi') {
                 uniqueGrades = user.mojeTrida ? [user.mojeTrida] : [];
@@ -525,6 +538,11 @@
                         // Logika dodatečných filtrů
                         if (activeSubject !== "Vše" && m.predmet !== activeSubject) return false;
                         if (filterType !== "Vše" && m.typ !== filterType) return false;
+                        if (filterTag !== "Vše") {
+                            if (!m.tagy) return false;
+                            const mTags = m.tagy.split(',').map(t => t.trim());
+                            if (!mTags.includes(filterTag)) return false;
+                        }
                         if (filterClassAdditional !== "Vše" && m.trida !== filterClassAdditional) return false;
 
                         return (m.nazev + m.tagy + m.predmet + (m.poznamka || "")).toLowerCase().includes(searchQuery.toLowerCase());
@@ -599,8 +617,8 @@
                 
                 // MAIN CONTAINER
                 React.createElement('div', { className: "max-w-7xl mx-auto p-6 flex flex-col md:flex-row gap-8 flex-1 w-full" },
-                    // SIDEBAR
-                    React.createElement('aside', { className: "md:w-60 flex-shrink-0 space-y-4" },
+                    // SIDEBAR - STICKY FIXED
+                    React.createElement('aside', { className: "md:w-60 flex-shrink-0 space-y-4 sticky top-24 h-[calc(100vh-6rem)] overflow-y-auto custom-scroll pb-10" },
                         React.createElement('div', { className: "flex flex-col gap-1 bg-white/50 p-2 rounded-[2rem] border border-blue-50 shadow-sm" },
                             React.createElement('h3', { className: "text-[9px] font-black text-blue-200 uppercase tracking-widest py-4 text-center" }, "Ročníky"),
                             user.typStudenta !== 'externi' && React.createElement('button', { onClick: () => { setActiveGrade("Vše"); setViewMode('portal'); }, className: `px-5 py-4 rounded-2xl font-bold text-xs text-left transition-all ${activeGrade === "Vše" && viewMode === 'portal' ? 'bg-blue-600 text-white shadow-xl translate-x-2' : 'text-slate-500 hover:bg-white hover:text-blue-600'}` }, "Vše"),
@@ -635,6 +653,12 @@
                                         React.createElement('span', { className: "text-[10px] font-bold uppercase text-slate-400" }, "Typ dokumentu:"),
                                         React.createElement('select', { value: filterType, onChange: e => setFilterType(e.target.value), className: "p-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-600" },
                                             uniqueTypes.map(t => React.createElement('option', { key: t, value: t }, t))
+                                        )
+                                    ),
+                                    React.createElement('div', { className: "flex items-center gap-2" },
+                                        React.createElement('span', { className: "text-[10px] font-bold uppercase text-slate-400" }, "Tagy:"),
+                                        React.createElement('select', { value: filterTag, onChange: e => setFilterTag(e.target.value), className: "p-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-600" },
+                                            uniqueTags.map(t => React.createElement('option', { key: t, value: t }, t))
                                         )
                                     ),
                                     React.createElement('div', { className: "flex items-center gap-2" },
@@ -765,7 +789,7 @@
                                                     u.mojeTrida && u.vek ? ' • ' : '', 
                                                     u.vek ? `Věk: ${u.vek}` : ''
                                                 ),
-                                                u.datumNastupu && React.createElement('div', { className: "text-[11px] text-slate-400 font-mono mt-1" }, `Nástup: ${new Date(u.datumNastupu).toLocaleDateString('cs-CZ')}`)
+                                                u.datumNastupu && React.createElement('div', { className: "text-[11px] text-slate-400 font-mono mt-1" }, `Nástup: ${formatDateCZ(u.datumNastupu)}`)
                                             ),
                                             React.createElement('div', { className: "ml-auto" }, 
                                                 !isActive ? React.createElement(EyeOff, { size: 16, className: "text-slate-400" }) :
@@ -1006,11 +1030,11 @@
                                     React.createElement('div', { className: "grid grid-cols-2 gap-4" },
                                         React.createElement('div', null,
                                             React.createElement('label', { className: "text-[10px] font-bold uppercase text-slate-300 ml-2 block mb-1" }, "Datum nástupu"),
-                                            React.createElement('div', { className: "w-full p-4 bg-slate-50 border rounded-2xl text-sm text-slate-500 font-mono" }, user.datumNastupu || "-")
+                                            React.createElement('div', { className: "w-full p-4 bg-slate-50 border rounded-2xl text-sm text-slate-500 font-mono" }, formatDateCZ(user.datumNastupu))
                                         ),
                                         React.createElement('div', null,
                                             React.createElement('label', { className: "text-[10px] font-bold uppercase text-slate-300 ml-2 block mb-1" }, "Datum ukončení"),
-                                            React.createElement('div', { className: "w-full p-4 bg-slate-50 border rounded-2xl text-sm text-slate-500 font-mono" }, user.datumUkonceni || "-")
+                                            React.createElement('div', { className: "w-full p-4 bg-slate-50 border rounded-2xl text-sm text-slate-500 font-mono" }, formatDateCZ(user.datumUkonceni))
                                         )
                                     )
                                 ),
