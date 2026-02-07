@@ -366,6 +366,24 @@
                 try { await fetch(DEFAULT_API_URL, { method: 'POST', body: JSON.stringify({ action: 'toggleProgress', login: user.login, materialId: materialId }) }); } catch(e) {}
             };
 
+            const handleDeletePersonalDoc = async (e, docId) => {
+                e.stopPropagation();
+                if(!confirm("Opravdu smazat tento dokument?")) return;
+                
+                setData(prev => ({
+                    ...prev,
+                    personalDocs: prev.personalDocs.filter(d => d.id !== docId)
+                }));
+
+                try {
+                    await fetch(DEFAULT_API_URL, { method: 'POST', body: JSON.stringify({ action: 'deletePersonalDoc', id: docId }) });
+                    setToast("Dokument smazán");
+                } catch(err) {
+                    alert("Chyba mazání: " + err);
+                    loadData();
+                }
+            };
+
             const handleUploadSubmit = async (e) => {
                 e.preventDefault();
                 if (!uploadFile) return alert("Vyberte soubor");
@@ -956,15 +974,18 @@
                                             React.createElement('h3', { className: "font-bold text-slate-900 uppercase text-xs mb-4" }, "Nahrané dokumenty"),
                                             React.createElement('div', { className: "space-y-2 max-h-60 overflow-y-auto custom-scroll pr-2" },
                                                 (data.personalDocs || []).filter(d => d.userLogin === selectedStudent.login).map(d => 
-                                                    React.createElement('a', { key: d.id, href: d.url, target: "_blank", className: "flex items-center justify-between p-4 bg-slate-50 rounded-2xl hover:bg-slate-100 transition-colors group" },
-                                                        React.createElement('div', { className: "flex items-center gap-3" },
+                                                    React.createElement('div', { key: d.id, className: "flex items-center justify-between p-4 bg-slate-50 rounded-2xl hover:bg-slate-100 transition-colors group" },
+                                                        React.createElement('a', { href: d.url, target: "_blank", className: "flex items-center gap-3 flex-1" },
                                                             React.createElement('div', { className: "bg-white p-2 rounded-xl border border-slate-200 text-indigo-500" }, React.createElement(FileText, { size: 18 })),
                                                             React.createElement('div', null,
                                                                 React.createElement('div', { className: "font-bold text-slate-800 text-sm" }, d.nazev),
                                                                 React.createElement('div', { className: "text-[10px] text-slate-400" }, new Date(d.datum).toLocaleDateString())
                                                             )
                                                         ),
-                                                        React.createElement(FileOutput, { size: 16, className: "text-slate-300 group-hover:text-indigo-500" })
+                                                        React.createElement('div', { className: "flex items-center gap-2" },
+                                                            React.createElement('a', { href: d.url, target: "_blank", className: "p-2 text-slate-300 hover:text-indigo-500 transition-colors" }, React.createElement(FileOutput, { size: 16 })),
+                                                            React.createElement('button', { onClick: (e) => handleDeletePersonalDoc(e, d.id), className: "p-2 text-red-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all" }, React.createElement(Trash2, { size: 16 }))
+                                                        )
                                                     )
                                                 )
                                             )
