@@ -122,10 +122,37 @@
         };
 
         const Timeline = () => {
-             const [currentMonth, setCurrentMonth] = useState(0);
+             const [todayPos, setTodayPos] = useState({ sem: 0, pos: 0 }); // sem: 1, 2, 3 (holiday), pos: %
 
              useEffect(() => {
-                 setCurrentMonth(new Date().getMonth()); // 0 = Jan
+                 const now = new Date();
+                 const month = now.getMonth(); // 0 = Jan
+                 const day = now.getDate();
+                 
+                 // Semester 1: Sep(8) - Jan(0). Total 5 months.
+                 // Order: Sep, Oct, Nov, Dec, Jan
+                 if ([8, 9, 10, 11, 0].includes(month)) {
+                     const semMonthIndices = [8, 9, 10, 11, 0];
+                     const idx = semMonthIndices.indexOf(month);
+                     const daysInMonth = new Date(now.getFullYear(), month + 1, 0).getDate();
+                     const progress = (idx + (day / daysInMonth)) / 5;
+                     setTodayPos({ sem: 1, pos: progress * 100 });
+                 } 
+                 // Semester 2: Feb(1) - Jun(5). Total 5 months.
+                 // Order: Feb, Mar, Apr, May, Jun
+                 else if ([1, 2, 3, 4, 5].includes(month)) {
+                     const idx = month - 1; // Feb(1) -> 0
+                     const daysInMonth = new Date(now.getFullYear(), month + 1, 0).getDate();
+                     const progress = (idx + (day / daysInMonth)) / 5;
+                     setTodayPos({ sem: 2, pos: progress * 100 });
+                 } 
+                 // Holiday: Jul(6), Aug(7). Total 2 months.
+                 else {
+                     const idx = month - 6; // Jul(6) -> 0
+                     const daysInMonth = new Date(now.getFullYear(), month + 1, 0).getDate();
+                     const progress = (idx + (day / daysInMonth)) / 2;
+                     setTodayPos({ sem: 3, pos: progress * 100 });
+                 }
              }, []);
 
              const months1 = ["zář", "říj", "lis", "pro", "led"];
@@ -134,38 +161,38 @@
              
              return React.createElement('div', { className: "w-full bg-white border-b border-blue-100 py-3 sticky top-20 z-30 shadow-sm overflow-hidden" },
                 React.createElement('div', { className: "max-w-7xl mx-auto px-6 relative flex items-center gap-1" },
-                    // 1. Pololetí (Září - Leden)
+                    // 1. Pololetí
                     React.createElement('div', { className: "flex-1 relative" },
                         React.createElement('div', { className: "h-2 bg-blue-100 rounded-l-full relative overflow-hidden" },
-                             [8, 9, 10, 11, 0].includes(currentMonth) && React.createElement('div', { className: "absolute top-0 bottom-0 bg-blue-200/50 w-full animate-pulse" })
+                             todayPos.sem === 1 && React.createElement('div', { className: "absolute top-0 bottom-0 bg-blue-200/50 w-full animate-pulse" })
                         ),
                         React.createElement('span', { className: "absolute -top-3.5 left-2 text-[8px] font-bold text-blue-300 uppercase tracking-wider" }, "1. Pololetí"),
                         React.createElement('div', { className: "flex justify-between px-2 pt-1" },
                             months1.map((m, i) => React.createElement('span', { key: m, className: "text-[9px] text-slate-300 font-light uppercase" }, m))
                         ),
-                        [8, 9, 10, 11, 0].includes(currentMonth) && React.createElement('div', { className: "absolute top-1 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 bg-red-500 rounded-full border-2 border-white shadow-sm z-10", title: "Dnes" })
+                        todayPos.sem === 1 && React.createElement('div', { className: "absolute top-1 -translate-y-1/2 w-3 h-3 bg-red-500 rounded-full border-2 border-white shadow-sm z-10 transition-all duration-1000", style: { left: `calc(${todayPos.pos}% - 6px)` }, title: "Dnes" })
                     ),
-                    // 2. Pololetí (Únor - Červen)
+                    // 2. Pololetí
                     React.createElement('div', { className: "flex-1 relative" },
                         React.createElement('div', { className: "h-2 bg-green-100 relative overflow-hidden" },
-                             [1, 2, 3, 4, 5].includes(currentMonth) && React.createElement('div', { className: "absolute top-0 bottom-0 bg-green-200/50 w-full animate-pulse" })
+                             todayPos.sem === 2 && React.createElement('div', { className: "absolute top-0 bottom-0 bg-green-200/50 w-full animate-pulse" })
                         ),
                         React.createElement('span', { className: "absolute -top-3.5 left-2 text-[8px] font-bold text-green-300 uppercase tracking-wider" }, "2. Pololetí"),
                         React.createElement('div', { className: "flex justify-between px-2 pt-1" },
                             months2.map((m, i) => React.createElement('span', { key: m, className: "text-[9px] text-slate-300 font-light uppercase" }, m))
                         ),
-                        [1, 2, 3, 4, 5].includes(currentMonth) && React.createElement('div', { className: "absolute top-1 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 bg-red-500 rounded-full border-2 border-white shadow-sm z-10", title: "Dnes" })
+                        todayPos.sem === 2 && React.createElement('div', { className: "absolute top-1 -translate-y-1/2 w-3 h-3 bg-red-500 rounded-full border-2 border-white shadow-sm z-10 transition-all duration-1000", style: { left: `calc(${todayPos.pos}% - 6px)` }, title: "Dnes" })
                     ),
-                    // Prázdniny (Červenec - Srpen)
+                    // Prázdniny
                     React.createElement('div', { className: "w-[16%] relative" },
                         React.createElement('div', { className: "h-2 bg-amber-100 rounded-r-full relative overflow-hidden" },
-                             [6, 7].includes(currentMonth) && React.createElement('div', { className: "absolute top-0 bottom-0 bg-amber-200/50 w-full animate-pulse" })
+                             todayPos.sem === 3 && React.createElement('div', { className: "absolute top-0 bottom-0 bg-amber-200/50 w-full animate-pulse" })
                         ),
                         React.createElement('span', { className: "absolute -top-3.5 left-2 text-[8px] font-bold text-amber-300 uppercase tracking-wider" }, "Prázdniny"),
                         React.createElement('div', { className: "flex justify-between px-2 pt-1" },
                             months3.map((m, i) => React.createElement('span', { key: m, className: "text-[9px] text-slate-300 font-light uppercase" }, m))
                         ),
-                        [6, 7].includes(currentMonth) && React.createElement('div', { className: "absolute top-1 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 bg-red-500 rounded-full border-2 border-white shadow-sm z-10", title: "Dnes" })
+                        todayPos.sem === 3 && React.createElement('div', { className: "absolute top-1 -translate-y-1/2 w-3 h-3 bg-red-500 rounded-full border-2 border-white shadow-sm z-10 transition-all duration-1000", style: { left: `calc(${todayPos.pos}% - 6px)` }, title: "Dnes" })
                     ),
                     // Global marker label
                     React.createElement('div', { className: "absolute right-0 -bottom-3 text-[9px] font-bold text-slate-200" }, new Date().getFullYear())
@@ -185,7 +212,7 @@
             const [activeSubject, setActiveSubject] = useState("Vše");
             const [searchQuery, setSearchQuery] = useState("");
             const [showFilters, setShowFilters] = useState(false);
-            const [viewMode, setViewMode] = useState('portal'); // portal, config, students (manage removed)
+            const [viewMode, setViewMode] = useState('portal'); 
             const [visibleItems, setVisibleItems] = useState(ITEMS_PER_PAGE);
             
             // New Filter States
@@ -194,7 +221,7 @@
 
             const [selectedItems, setSelectedItems] = useState([]);
             const [processingIds, setProcessingIds] = useState([]);
-            const [toast, setToast] = useState(null); // String or {msg, type}
+            const [toast, setToast] = useState(null);
             
             const [showUploadModal, setShowUploadModal] = useState(false);
             const [showEditModal, setShowEditModal] = useState(null);
@@ -210,7 +237,7 @@
             const [studentFilterClass, setStudentFilterClass] = useState("Vše");
             const [hideInactive, setHideInactive] = useState(false);
             
-            // Admin Edit Student State (Expanded to include all profile fields)
+            // Admin Edit Student State
             const [adminStudentData, setAdminStudentData] = useState({ 
                 aktivni: 'ano', datumNastupu: '', datumUkonceni: '',
                 jmeno: '', login: '', pin: '', mojeTrida: '', typStudenta: 'interni', emailRodice: '', vek: '', kmenovaSkola: ''
@@ -220,12 +247,12 @@
             const [loginInput, setLoginInput] = useState('');
             const [pinInput, setPinInput] = useState('');
 
-            // Upload State (Materials) - Added odkazWeb, obdobi
+            // Upload State
             const [uploadFile, setUploadFile] = useState(null);
             const [uploadMeta, setUploadMeta] = useState({ nazev: '', poznamka: '', trida: '', predmet: '', typ: '', tagy: '', cilovaSkupina: 'all', odkazWeb: '', obdobi: '0' });
             const [isUploading, setIsUploading] = useState(false);
 
-            // Edit State (File Replacement)
+            // Edit State
             const [editFile, setEditFile] = useState(null);
 
             // Upload State (Personal Docs)
@@ -240,7 +267,7 @@
             const [profileConfig, setProfileConfig] = useState({ mojeTrida: '', emailRodice: '', vek: '', kmenovaSkola: '' });
             
             // Current Semester Calc
-            const [currentSemester, setCurrentSemester] = useState(0); // 1, 2 or 0 (unknown/holiday)
+            const [currentSemester, setCurrentSemester] = useState(0);
 
 
             // --- INIT ---
@@ -249,11 +276,9 @@
                 if (saved) setUser(JSON.parse(saved));
                 
                 const month = new Date().getMonth(); // 0 = Jan
-                // 1. Pol: Sep(8) - Jan(0) -> 8,9,10,11,0
-                // 2. Pol: Feb(1) - Jun(5) -> 1,2,3,4,5
                 if ([8, 9, 10, 11, 0].includes(month)) setCurrentSemester(1);
                 else if ([1, 2, 3, 4, 5].includes(month)) setCurrentSemester(2);
-                else setCurrentSemester(0); // Holidays
+                else setCurrentSemester(0);
             }, []);
 
             useEffect(() => {
@@ -273,7 +298,6 @@
                 }
             }, [user]);
 
-            // Sync admin edit state when student selected
             useEffect(() => {
                 if (selectedStudent) {
                     setAdminStudentData({
@@ -281,7 +305,7 @@
                         datumNastupu: selectedStudent.datumNastupu || '',
                         datumUkonceni: selectedStudent.datumUkonceni || '',
                         jmeno: selectedStudent.jmeno,
-                        login: selectedStudent.login, // Read only primarily
+                        login: selectedStudent.login,
                         pin: selectedStudent.pin,
                         mojeTrida: selectedStudent.mojeTrida || '',
                         typStudenta: selectedStudent.typStudenta || 'interni',
@@ -375,7 +399,6 @@
                 const updatedUser = { ...user, ...profileConfig };
                 try {
                     await fetch(DEFAULT_API_URL, { method: 'POST', body: JSON.stringify({ action: 'updateUserConfig', login: user.login, ...profileConfig }) });
-                    // OKAMŽITÁ AKTUALIZACE LOCALSTORAGE I STATE
                     setUser(updatedUser);
                     localStorage.setItem('domoskola_user', JSON.stringify(updatedUser));
                     
@@ -422,7 +445,6 @@
                     if(json.error) throw new Error(json.error);
                     
                     showToast("Údaje uloženy");
-                    // Aktualizace lokálních dat
                     const updatedUser = { ...selectedStudent, ...adminStudentData };
                     setSelectedStudent(updatedUser);
                     setData(prev => ({
@@ -473,11 +495,10 @@
                 if (!uploadFile && !uploadMeta.odkazWeb) return showToast("Vyberte soubor nebo zadejte odkaz", 'error');
                 setIsUploading(true);
                 
-                // Pokud je vybrána třída GENERAL_INFO_LABEL, nastavíme defaultní hodnoty pro předmět a typ
                 const finalUploadMeta = { ...uploadMeta };
                 if (uploadMeta.trida === GENERAL_INFO_LABEL) {
-                    finalUploadMeta.predmet = "Info"; // Interní default
-                    finalUploadMeta.typ = "Dokument"; // Interní default
+                    finalUploadMeta.predmet = "Info"; 
+                    finalUploadMeta.typ = "Dokument"; 
                 }
                 
                 const processUpload = async (base64String = null, mimeType = null, filename = null) => {
@@ -540,7 +561,7 @@
                 } else if (action === 'edit') {
                     setData(prev => ({ ...prev, materials: prev.materials.map(m => m.id === extraData.id ? {...m, ...extraData} : m) }));
                     setShowEditModal(null);
-                    setEditFile(null); // Reset file
+                    setEditFile(null);
                 }
                 try {
                     await fetch(DEFAULT_API_URL, { method: 'POST', body: JSON.stringify({ action, ids, ...extraData }) });
@@ -553,9 +574,8 @@
                 e.preventDefault();
                 let extraData = { id: showEditModal.id, ...showEditModal };
                 
-                // Pokud je vybrán nový soubor, načteme ho
                 if (editFile) {
-                    setIsUploading(true); // Re-use uploading spinner logic if needed or local loading
+                    setIsUploading(true);
                     const reader = new FileReader();
                     reader.onload = async () => {
                         const base64String = reader.result.split(',')[1];
@@ -619,7 +639,6 @@
             
             const formatDateCZ = (isoString) => {
                 if (!isoString) return "-";
-                // Bere string yyyy-MM-dd a jen ho přeformátuje, ignoruje timezony
                 const parts = isoString.split('-');
                 if (parts.length !== 3) return isoString;
                 return `${parseInt(parts[2])}. ${parseInt(parts[1])}. ${parts[0]}`;
@@ -644,11 +663,9 @@
             const uniqueSubjects = ["Vše", ...data.config.filter(c => c.kategorie === 'Predmet').map(c => c.nazev).sort()];
             const uniqueTypes = ["Vše", ...data.config.filter(c => c.kategorie === 'Typ').map(c => c.nazev).sort()];
             
-            // Extract unique tags from all materials AND config tags
             const configTags = data.config.filter(c => c.kategorie === 'Tag').map(c => c.nazev);
             const usedTags = data.materials.flatMap(m => m.tagy ? m.tagy.split(',').map(t => t.trim()) : []).filter(t => t !== "");
             const allTagsRaw = [...new Set([...configTags, ...usedTags])].sort();
-            // Force Vše to be first
             const uniqueTags = ["Vše", ...allTagsRaw.filter(t => t !== "Vše" && t !== "")];
             
             if (user && user.typStudenta === 'externi') {
@@ -658,16 +675,13 @@
             const getFilteredMaterials = () => {
                  return data.materials.filter(m => {
                     if (viewMode === 'portal') {
-                        // Admin vidí vše, ale vizuálně odlišeno
                         if (user.role !== 'admin' && m.status !== 'publikovano') return false;
                         
-                        // Externí vidí jen své nebo pro všechny
                         if (user.typStudenta === 'externi') {
                             if (m.cilovaSkupina === 'interni') return false;
                             if (m.trida !== GENERAL_INFO_LABEL && m.trida !== user.mojeTrida) return false;
                         }
                         
-                        // Logika hlavního filtru (Sidebar)
                         if (activeGrade === GENERAL_INFO_LABEL) {
                             if (m.trida !== GENERAL_INFO_LABEL) return false;
                         } else {
@@ -675,13 +689,11 @@
                             if (activeGrade !== "Vše" && m.trida !== activeGrade) return false;
                         }
 
-                        // Logika dodatečných filtrů
                         if (activeGrade !== GENERAL_INFO_LABEL) {
                              if (activeSubject !== "Vše" && m.predmet !== activeSubject) return false;
                              if (filterType !== "Vše" && m.typ !== filterType) return false;
                         }
                         
-                        // Tag filter applies to both
                         if (filterTag !== "Vše") {
                             if (!m.tagy) return false;
                             const mTags = m.tagy.split(',').map(t => t.trim());
@@ -695,7 +707,6 @@
             };
 
             const filteredMaterials = getFilteredMaterials().sort((a, b) => {
-                // PRIMÁRNĚ JEN DATUM (a status/done neovlivňuje pořadí, jen vzhled)
                 return new Date(b.datum).getTime() - new Date(a.datum).getTime();
             });
 
@@ -1418,7 +1429,7 @@
                     )
                 ),
 
-                // NEWS MODAL (Missing from previous output, adding it back)
+                // NEWS MODAL
                 showNewsModal && React.createElement('div', { className: "fixed inset-0 z-50 flex items-center justify-center p-6 modal-overlay", onClick: () => setShowNewsModal(false) },
                      React.createElement('div', { className: "bg-white rounded-[3.5rem] shadow-2xl w-full max-w-lg p-10 animate-in relative flex flex-col max-h-[85vh]", onClick: e => e.stopPropagation() },
                         React.createElement('div', { className: "flex justify-between items-center mb-8 shrink-0" },
