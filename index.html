@@ -920,11 +920,19 @@
                                                     (m.status !== 'publikovano' && React.createElement('span', { className: "text-red-500 font-bold flex items-center gap-1" }, React.createElement(EyeOff, { size: 12 }), "NEAKTIVNÍ"))
                                                     : (done && React.createElement('span', { className: "done-info flex items-center gap-1" }, React.createElement(CheckCircle, { size: 12 }), "HOTOVO ", doneDate))
                                             ),
-                                            React.createElement('div', { className: "flex gap-3" },
-                                                m.odkaz && React.createElement('a', { href: m.odkaz, target: "_blank", rel: "noreferrer", className: `action-btn flex-1 flex items-center justify-center gap-3 text-white py-4 rounded-2xl text-[11px] font-bold uppercase shadow-lg active:scale-95 transition-all btn-${color} ${btnOpacityClass}` }, m.typ.includes('Video') ? React.createElement(Video, { size: 16 }) : React.createElement(FileText, { size: 16 }), " Soubor"),
-                                                m.odkazWeb && React.createElement('a', { href: m.odkazWeb, target: "_blank", rel: "noreferrer", className: `action-btn flex-1 flex items-center justify-center gap-3 text-white py-4 rounded-2xl text-[11px] font-bold uppercase shadow-lg active:scale-95 transition-all btn-${color} ${btnOpacityClass}` }, React.createElement(Globe, { size: 16 }), " Web"),
-                                                user.role !== 'admin' && !isGeneralMaterial && React.createElement('button', { onClick: () => handleToggleProgress(m.id), className: `px-4 flex items-center justify-center gap-2 rounded-2xl border-2 transition-all font-bold uppercase text-[9px] ${done ? 'bg-emerald-100 border-emerald-300 text-emerald-600' : 'bg-white border-slate-200 text-slate-400 hover:border-blue-300 hover:text-blue-600'}` }, 
-                                                    done ? React.createElement(React.Fragment, null, React.createElement(CheckSquare, { size: 16 }), "Splněno") : React.createElement(React.Fragment, null, React.createElement(Square, { size: 16 }), "Označit")
+                                            React.createElement('div', { className: "flex gap-2 items-stretch" },
+                                                // Group links to share width
+                                                React.createElement('div', { className: "flex-1 flex gap-2" },
+                                                    m.odkaz && React.createElement('a', { href: m.odkaz, target: "_blank", rel: "noreferrer", className: `action-btn flex-1 flex items-center justify-center gap-3 text-white py-3 rounded-2xl text-[11px] font-bold uppercase shadow-lg active:scale-95 transition-all btn-${color} ${btnOpacityClass}` }, m.typ.includes('Video') ? React.createElement(Video, { size: 16 }) : React.createElement(FileText, { size: 16 }), " Soubor"),
+                                                    m.odkazWeb && React.createElement('a', { href: m.odkazWeb, target: "_blank", rel: "noreferrer", className: `action-btn flex-1 flex items-center justify-center gap-3 text-white py-3 rounded-2xl text-[11px] font-bold uppercase shadow-lg active:scale-95 transition-all btn-${color} ${btnOpacityClass}` }, React.createElement(Globe, { size: 16 }), " Web")
+                                                ),
+                                                // Compact Toggle Button
+                                                user.role !== 'admin' && !isGeneralMaterial && React.createElement('button', { 
+                                                    onClick: () => handleToggleProgress(m.id), 
+                                                    className: `min-w-[4rem] rounded-2xl border-2 flex flex-col items-center justify-center gap-0.5 transition-all ${done ? 'bg-emerald-100 border-emerald-300' : 'bg-white border-slate-200 hover:border-blue-300 group/toggle'}`
+                                                }, 
+                                                    React.createElement(done ? CheckCircle : Square, { size: 20, className: done ? "text-emerald-600" : "text-slate-300 group-hover/toggle:text-blue-500" }),
+                                                    React.createElement('span', { className: `text-[8px] font-bold uppercase ${done ? 'text-emerald-600' : 'text-slate-400 group-hover/toggle:text-blue-500'}` }, done ? "Hotovo" : "Splnit")
                                                 )
                                             )
                                         )
