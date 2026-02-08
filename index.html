@@ -159,7 +159,6 @@
              const months2 = ["úno", "bře", "dub", "kvě", "čer"];
              const months3 = ["čvc", "srp"];
              
-             // UPROSTŘED NAHOŘE -> Zjednodušený kontejner pro umístění v headeru
              return React.createElement('div', { className: "w-full flex items-center h-full px-4" },
                 React.createElement('div', { className: "w-full relative flex items-center gap-1" },
                     // 1. Pololetí
@@ -266,18 +265,27 @@
             const [profileConfig, setProfileConfig] = useState({ mojeTrida: '', emailRodice: '', vek: '', kmenovaSkola: '' });
             
             // Current Semester Calc
-            const [currentSemester, setCurrentSemester] = useState(0);
+            const [currentSemester, setCurrentSemester] = useState(() => {
+                const month = new Date().getMonth();
+                if ([8, 9, 10, 11, 0].includes(month)) return 1;
+                if ([1, 2, 3, 4, 5].includes(month)) return 2;
+                return 0;
+            });
 
 
             // --- INIT ---
             useEffect(() => {
                 const saved = localStorage.getItem('domoskola_user');
-                if (saved) setUser(JSON.parse(saved));
-                
-                const month = new Date().getMonth(); // 0 = Jan
-                if ([8, 9, 10, 11, 0].includes(month)) setCurrentSemester(1);
-                else if ([1, 2, 3, 4, 5].includes(month)) setCurrentSemester(2);
-                else setCurrentSemester(0);
+                if (saved) {
+                    const parsedUser = JSON.parse(saved);
+                    setUser(parsedUser);
+                    // OKAMŽITÁ INICIALIZACE FILTRŮ PŘI OBNOVENÍ (OPRAVA CHYBY POLO-APLIKACE)
+                    if (parsedUser.typStudenta === 'externi' && parsedUser.mojeTrida) {
+                        setActiveGrade(parsedUser.mojeTrida);
+                    } else if (parsedUser.mojeTrida) {
+                        setActiveGrade(parsedUser.mojeTrida);
+                    }
+                }
             }, []);
 
             useEffect(() => {
@@ -289,11 +297,6 @@
                         vek: user.vek || '',
                         kmenovaSkola: user.kmenovaSkola || ''
                     });
-                    if (user.typStudenta === 'externi' && user.mojeTrida) {
-                        setActiveGrade(user.mojeTrida);
-                    } else if (user.mojeTrida) {
-                        setActiveGrade(user.mojeTrida);
-                    }
                 }
             }, [user]);
 
@@ -332,6 +335,7 @@
                     const res = await fetch(DEFAULT_API_URL, { method: 'POST', body: JSON.stringify({ action: 'getData' }) });
                     const json = await res.json();
                     if (json.error) throw new Error(json.error);
+                    // Default sort by date DESC, logic overridden below for students
                     if (json.materials) json.materials.sort((a, b) => new Date(b.datum).getTime() - new Date(a.datum).getTime());
                     setData(prev => ({
                         ...prev,
@@ -385,6 +389,7 @@
                                 progress: json.progress || [],
                                 personalDocs: json.personalDocs || []
                             });
+                            // DŮLEŽITÉ: Nastavit třídu ihned po přihlášení
                             if (found.mojeTrida) setActiveGrade(found.mojeTrida);
                         } else { setLoginError("Neplatné přihlašovací jméno nebo PIN."); }
                     })
@@ -705,7 +710,28 @@
                 });
             };
 
+            // SORTING LOGIC FIXED HERE
             const filteredMaterials = getFilteredMaterials().sort((a, b) => {
+                if (user.role !== 'admin') {
+                    // Score function for students
+                    const getScore = (m) => {
+                        const itemSem = String(m.obdobi || '0');
+                        const currSem = String(currentSemester);
+                        
+                        if (itemSem === currSem) return 3; // Highest priority: Current Semester
+                        if (itemSem === '0') return 2;     // Medium priority: Full Year
+                        return 1;                          // Low priority: Other semesters
+                    };
+                    
+                    const scoreA = getScore(a);
+                    const scoreB = getScore(b);
+                    
+                    // If scores are different, higher score comes first
+                    if (scoreA !== scoreB) {
+                        return scoreB - scoreA;
+                    }
+                }
+                // Default: Newest first (Secondary sort)
                 return new Date(b.datum).getTime() - new Date(a.datum).getTime();
             });
 
@@ -855,7 +881,7 @@
                                         
                                     // Visual logic for Semesters
                                     const itemSem = m.obdobi || '0'; // 0, 1, 2
-                                    const isCurrentSem = (itemSem == 0) || (itemSem == currentSemester);
+                                    const isCurrentSem = (itemSem == 0) || (itemSem == String(currentSemester));
                                     const btnOpacityClass = isCurrentSem ? '' : 'opacity-40 hover:opacity-100';
 
                                     return React.createElement('div', { key: m.id, className: `${cardClass} border-2 rounded-[2rem] p-8 hover:shadow-xl transition-all group flex flex-col justify-between relative` },
@@ -1149,7 +1175,7 @@
                                             ),
                                             React.createElement('div', null,
                                                 React.createElement('label', { className: "text-[10px] font-bold uppercase text-slate-400 ml-2" }, "Název"),
-                                                React.createElement('input', { value: configEditItem ? configEditItem.nazev : newConfig.nazev, onChange: e => configEditItem ? setConfigEditItem({...configEditItem, nazev: e.target.value}) : setNewConfig({...newConfig, nazev: e.target.value}), placeholder: "Např. Prvouka", required: true, className: "w-full p-4 bg-slate-50 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-600" })
+                                                React.createElement('input', { value: configEditItem ? configEditItem.nazev : newConfig.nazev, onChange: e => configEditItem ? setConfigEditItem({...configEditItem, nazev: e.target.value}) : setNewConfig({...newConfig, nazev: e.target.value}), placeholder: "Např. Prvouka", required: true, className: "w-full p-4 bg-slate-50 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 transition-all" })
                                             ),
                                             ((configEditItem?.kategorie || newConfig.kategorie) === 'Predmet') && React.createElement('div', null,
                                                 React.createElement('label', { className: "text-[10px] font-bold uppercase text-slate-400 ml-2" }, "Barva"),
