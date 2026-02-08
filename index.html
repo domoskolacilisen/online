@@ -740,15 +740,15 @@
             // LOGIN SCREEN
             if (!user) {
                 return React.createElement('div', { className: "min-h-screen bg-blue-600 flex items-center justify-center p-6 text-slate-900 font-sans" },
-                    React.createElement('div', { className: "max-w-md w-full bg-white rounded-[3.5rem] p-12 shadow-2xl animate-in text-center" },
-                        React.createElement('div', { className: "bg-blue-50 w-24 h-24 rounded-[2rem] flex items-center justify-center mx-auto mb-8 text-blue-600 shadow-inner" }, React.createElement(School, { size: 48, strokeWidth: 2.5 })),
-                        React.createElement('h1', { className: "text-4xl font-black uppercase mb-2 tracking-tight text-blue-900 leading-tight" }, "Domoškola Líšeň"),
-                        React.createElement('p', { className: "text-blue-400 font-bold uppercase tracking-widest text-[10px] mb-10" }, "Digitální studovna"),
-                        React.createElement('form', { onSubmit: handleLogin, className: "space-y-6" },
-                            React.createElement('input', { type: "text", required: true, placeholder: "Přihlašovací jméno", value: loginInput, onChange: e => setLoginInput(e.target.value), className: "w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-center outline-none focus:ring-2 focus:ring-blue-600 transition-all placeholder:text-slate-300" }),
-                            React.createElement('input', { type: "password", required: true, placeholder: "PIN", value: pinInput, onChange: e => setPinInput(e.target.value), className: "w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-center font-mono outline-none focus:ring-2 focus:ring-blue-600 transition-all text-xl placeholder:text-slate-300" }),
-                            loginError && React.createElement('p', { className: "text-red-500 text-xs font-bold bg-red-50 p-4 rounded-xl border border-red-100" }, loginError),
-                            React.createElement('button', { type: "submit", disabled: loading, className: "w-full bg-blue-600 text-white py-5 rounded-[2rem] font-bold uppercase shadow-xl hover:bg-blue-700 active:scale-95 transition-all flex justify-center items-center gap-2" }, loading ? React.createElement(Loader2, { className: "animate-spin" }) : "Vstoupit")
+                    React.createElement('div', { className: "max-w-sm w-full bg-white rounded-[2.5rem] p-8 shadow-2xl animate-in text-center" },
+                        React.createElement('div', { className: "bg-blue-50 w-20 h-20 rounded-[1.5rem] flex items-center justify-center mx-auto mb-6 text-blue-600 shadow-inner" }, React.createElement(School, { size: 40, strokeWidth: 2.5 })),
+                        React.createElement('h1', { className: "text-3xl font-black uppercase mb-1 tracking-tight text-blue-900 leading-tight" }, "Domoškola Líšeň"),
+                        React.createElement('p', { className: "text-blue-400 font-bold uppercase tracking-widest text-[10px] mb-8" }, "Digitální studovna"),
+                        React.createElement('form', { onSubmit: handleLogin, className: "space-y-4" },
+                            React.createElement('input', { type: "text", required: true, placeholder: "Přihlašovací jméno", value: loginInput, onChange: e => setLoginInput(e.target.value), className: "w-full px-5 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-center outline-none focus:ring-2 focus:ring-blue-600 transition-all placeholder:text-slate-300 text-sm" }),
+                            React.createElement('input', { type: "password", required: true, placeholder: "PIN", value: pinInput, onChange: e => setPinInput(e.target.value), className: "w-full px-5 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-center font-mono outline-none focus:ring-2 focus:ring-blue-600 transition-all text-lg placeholder:text-slate-300" }),
+                            loginError && React.createElement('p', { className: "text-red-500 text-xs font-bold bg-red-50 p-3 rounded-xl border border-red-100" }, loginError),
+                            React.createElement('button', { type: "submit", disabled: loading, className: "w-full bg-blue-600 text-white py-4 rounded-[1.5rem] font-bold uppercase shadow-xl hover:bg-blue-700 active:scale-95 transition-all flex justify-center items-center gap-2 text-sm" }, loading ? React.createElement(Loader2, { className: "animate-spin" }) : "Vstoupit")
                         )
                     )
                 );
