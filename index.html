@@ -122,50 +122,53 @@
         };
 
         const Timeline = () => {
-             const [todayPos, setTodayPos] = useState(0);
              const [currentMonth, setCurrentMonth] = useState(0);
 
              useEffect(() => {
-                 const now = new Date();
-                 const start = new Date(now.getFullYear(), 0, 1); // Jan 1st
-                 const diff = now - start;
-                 const oneDay = 1000 * 60 * 60 * 24;
-                 const dayOfYear = Math.floor(diff / oneDay);
-                 
-                 // Calc position percentage (approx)
-                 const pos = (dayOfYear / 365) * 100;
-                 setTodayPos(pos);
-                 setCurrentMonth(now.getMonth()); // 0 = Jan
+                 setCurrentMonth(new Date().getMonth()); // 0 = Jan
              }, []);
 
-             const months = ["Led", "Úno", "Bře", "Dub", "Kvě", "Čer", "Čvc", "Srp", "Zář", "Říj", "Lis", "Pro"];
-             // Shifted for school year display: Sep(8) to Aug(7)
-             // But simple linear year view is often easier visually or split.
-             // Proposed structure: 1. Pol (IX-I), 2. Pol (II-VI), Prazdniny (VII-VIII)
+             const months1 = ["zář", "říj", "lis", "pro", "led"];
+             const months2 = ["úno", "bře", "dub", "kvě", "čer"];
+             const months3 = ["čvc", "srp"];
              
-             // Let's render a bar representing the school year flow or just calendar year?
-             // School year is better for students. 
-             // Logic: If today is Aug, pos is near end. If Sep, pos is start.
-             
-             return React.createElement('div', { className: "w-full bg-white border-b border-blue-100 py-2 sticky top-20 z-30 shadow-sm overflow-hidden" },
-                React.createElement('div', { className: "max-w-7xl mx-auto px-6 relative h-10 flex items-center" },
-                    // 1. Pololetí (Září - Leden) ~ 5 měsíců ~ 41%
-                    React.createElement('div', { className: "flex-1 h-2 bg-blue-100 rounded-l-full relative mx-1" },
-                        React.createElement('span', { className: "absolute -top-4 left-2 text-[9px] font-bold text-blue-300 uppercase" }, "1. Pololetí"),
-                        [8, 9, 10, 11, 0].includes(currentMonth) && React.createElement('div', { className: "absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-red-500 rounded-full border-2 border-white shadow-sm z-10", style: { left: '50%' }, title: "Dnes" }) // Simplified centering for active sem
+             return React.createElement('div', { className: "w-full bg-white border-b border-blue-100 py-3 sticky top-20 z-30 shadow-sm overflow-hidden" },
+                React.createElement('div', { className: "max-w-7xl mx-auto px-6 relative flex items-center gap-1" },
+                    // 1. Pololetí (Září - Leden)
+                    React.createElement('div', { className: "flex-1 relative" },
+                        React.createElement('div', { className: "h-2 bg-blue-100 rounded-l-full relative overflow-hidden" },
+                             [8, 9, 10, 11, 0].includes(currentMonth) && React.createElement('div', { className: "absolute top-0 bottom-0 bg-blue-200/50 w-full animate-pulse" })
+                        ),
+                        React.createElement('span', { className: "absolute -top-3.5 left-2 text-[8px] font-bold text-blue-300 uppercase tracking-wider" }, "1. Pololetí"),
+                        React.createElement('div', { className: "flex justify-between px-2 pt-1" },
+                            months1.map((m, i) => React.createElement('span', { key: m, className: "text-[9px] text-slate-300 font-light uppercase" }, m))
+                        ),
+                        [8, 9, 10, 11, 0].includes(currentMonth) && React.createElement('div', { className: "absolute top-1 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 bg-red-500 rounded-full border-2 border-white shadow-sm z-10", title: "Dnes" })
                     ),
-                    // 2. Pololetí (Únor - Červen) ~ 5 měsíců ~ 41%
-                    React.createElement('div', { className: "flex-1 h-2 bg-green-100 relative mx-1" },
-                        React.createElement('span', { className: "absolute -top-4 left-2 text-[9px] font-bold text-green-300 uppercase" }, "2. Pololetí"),
-                        [1, 2, 3, 4, 5].includes(currentMonth) && React.createElement('div', { className: "absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-red-500 rounded-full border-2 border-white shadow-sm z-10", style: { left: '50%' }, title: "Dnes" })
+                    // 2. Pololetí (Únor - Červen)
+                    React.createElement('div', { className: "flex-1 relative" },
+                        React.createElement('div', { className: "h-2 bg-green-100 relative overflow-hidden" },
+                             [1, 2, 3, 4, 5].includes(currentMonth) && React.createElement('div', { className: "absolute top-0 bottom-0 bg-green-200/50 w-full animate-pulse" })
+                        ),
+                        React.createElement('span', { className: "absolute -top-3.5 left-2 text-[8px] font-bold text-green-300 uppercase tracking-wider" }, "2. Pololetí"),
+                        React.createElement('div', { className: "flex justify-between px-2 pt-1" },
+                            months2.map((m, i) => React.createElement('span', { key: m, className: "text-[9px] text-slate-300 font-light uppercase" }, m))
+                        ),
+                        [1, 2, 3, 4, 5].includes(currentMonth) && React.createElement('div', { className: "absolute top-1 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 bg-red-500 rounded-full border-2 border-white shadow-sm z-10", title: "Dnes" })
                     ),
-                    // Prázdniny (Červenec - Srpen) ~ 2 měsíce ~ 16%
-                    React.createElement('div', { className: "w-[16%] h-2 bg-amber-100 rounded-r-full relative mx-1" },
-                        React.createElement('span', { className: "absolute -top-4 left-2 text-[9px] font-bold text-amber-300 uppercase" }, "Prázdniny"),
-                        [6, 7].includes(currentMonth) && React.createElement('div', { className: "absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-red-500 rounded-full border-2 border-white shadow-sm z-10", style: { left: '50%' }, title: "Dnes" })
+                    // Prázdniny (Červenec - Srpen)
+                    React.createElement('div', { className: "w-[16%] relative" },
+                        React.createElement('div', { className: "h-2 bg-amber-100 rounded-r-full relative overflow-hidden" },
+                             [6, 7].includes(currentMonth) && React.createElement('div', { className: "absolute top-0 bottom-0 bg-amber-200/50 w-full animate-pulse" })
+                        ),
+                        React.createElement('span', { className: "absolute -top-3.5 left-2 text-[8px] font-bold text-amber-300 uppercase tracking-wider" }, "Prázdniny"),
+                        React.createElement('div', { className: "flex justify-between px-2 pt-1" },
+                            months3.map((m, i) => React.createElement('span', { key: m, className: "text-[9px] text-slate-300 font-light uppercase" }, m))
+                        ),
+                        [6, 7].includes(currentMonth) && React.createElement('div', { className: "absolute top-1 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 bg-red-500 rounded-full border-2 border-white shadow-sm z-10", title: "Dnes" })
                     ),
                     // Global marker label
-                    React.createElement('div', { className: "absolute right-0 -bottom-1 text-[9px] font-bold text-slate-300" }, new Date().getFullYear())
+                    React.createElement('div', { className: "absolute right-0 -bottom-3 text-[9px] font-bold text-slate-200" }, new Date().getFullYear())
                 )
              );
         };
@@ -806,6 +809,12 @@
                                 )
                             ),
                             
+                            // LOADING STATE FOR CONTENT
+                            loading && data.materials.length === 0 ? React.createElement('div', { className: "flex flex-col items-center justify-center py-20 opacity-50" },
+                                React.createElement(Loader2, { className: "w-12 h-12 text-blue-400 animate-spin mb-4" }),
+                                React.createElement('div', { className: "text-slate-400 text-sm font-bold uppercase" }, "Načítám nástěnku...")
+                            ) : 
+                            
                             React.createElement('div', { className: "grid grid-cols-1 md:grid-cols-2 gap-8 pb-10 pt-4" },
                                 displayedMaterials.map(m => {
                                     const isGeneralMaterial = m.trida === GENERAL_INFO_LABEL;
@@ -842,8 +851,8 @@
                                                         React.createElement('span', { className: "px-3 py-1 text-[9px] font-bold uppercase rounded-full border border-current opacity-70 font-mono bg-white/50" }, m.typ)
                                                     )
                                                 ),
-                                                // Semester Badge
-                                                m.obdobi && m.obdobi != '0' && React.createElement('span', { className: "ml-auto px-2 py-0.5 rounded text-[9px] font-bold uppercase bg-white/60 text-slate-500 border border-slate-200" }, m.obdobi + ". Pol")
+                                                // Semester Badge - Improved Contrast
+                                                m.obdobi && m.obdobi != '0' && React.createElement('span', { className: "ml-auto px-2 py-0.5 rounded text-[9px] font-bold uppercase bg-white text-slate-500 border border-slate-200 shadow-sm" }, m.obdobi + ". Pol")
                                             ),
                                             React.createElement('div', { className: "flex items-center gap-2 mb-2" },
                                                 m.cilovaSkupina === 'interni' && React.createElement('div', { className: "flex items-center gap-1 text-purple-600 font-bold text-[10px] uppercase bg-purple-50 px-2 rounded-full" }, React.createElement(Lock, { size: 10 }), "Interní"),
@@ -870,7 +879,7 @@
                                         )
                                     );
                                 }),
-                                filteredMaterials.length === 0 && React.createElement('div', { className: "col-span-full text-center py-20 text-slate-400" }, "Nic nenalezeno.")
+                                filteredMaterials.length === 0 && !loading && React.createElement('div', { className: "col-span-full text-center py-20 text-slate-400" }, "Nic nenalezeno.")
                             ),
                             visibleItems < filteredMaterials.length && React.createElement('div', { className: "flex justify-center pb-20" },
                                 React.createElement('button', { onClick: () => setVisibleItems(prev => prev + ITEMS_PER_PAGE), className: "px-8 py-4 bg-white border border-blue-200 text-blue-600 font-bold uppercase text-xs rounded-[2rem] shadow-lg hover:bg-blue-50 transition-all flex items-center gap-2" },
@@ -1405,6 +1414,27 @@
                                     ) : React.createElement('div', { className: "text-slate-400 text-center text-sm py-4 italic" }, "Zatím žádná hodnocení.")
                                 )
                             )
+                        )
+                    )
+                ),
+
+                // NEWS MODAL (Missing from previous output, adding it back)
+                showNewsModal && React.createElement('div', { className: "fixed inset-0 z-50 flex items-center justify-center p-6 modal-overlay", onClick: () => setShowNewsModal(false) },
+                     React.createElement('div', { className: "bg-white rounded-[3.5rem] shadow-2xl w-full max-w-lg p-10 animate-in relative flex flex-col max-h-[85vh]", onClick: e => e.stopPropagation() },
+                        React.createElement('div', { className: "flex justify-between items-center mb-8 shrink-0" },
+                            React.createElement('h2', { className: "text-2xl font-bold text-blue-900 uppercase flex items-center gap-3" }, React.createElement(Bell, { className: "text-amber-500" }), "Aktuality"),
+                            React.createElement('button', { onClick: () => setShowNewsModal(false), className: "text-slate-300 hover:text-slate-500 transition-all" }, React.createElement(X, { className: "w-8 h-8" }))
+                        ),
+                        React.createElement('div', { className: "overflow-y-auto custom-scroll pr-2 flex-1 space-y-4" },
+                            data.news.length > 0 ? data.news.sort((a,b) => new Date(b.datum) - new Date(a.datum)).map(n => 
+                                React.createElement('div', { key: n.id, className: `p-6 rounded-[2rem] border ${n.priorita === 'vysoka' ? 'bg-red-50 border-red-100' : 'bg-slate-50 border-slate-100'}` },
+                                    React.createElement('div', { className: "flex justify-between items-start mb-2" },
+                                        React.createElement('h3', { className: `font-bold text-lg ${n.priorita === 'vysoka' ? 'text-red-800' : 'text-slate-800'}` }, n.titulek),
+                                        React.createElement('span', { className: "text-[10px] text-slate-400 uppercase font-bold" }, new Date(n.datum).toLocaleDateString())
+                                    ),
+                                    React.createElement('p', { className: "text-sm text-slate-600 leading-relaxed whitespace-pre-wrap" }, n.text)
+                                )
+                            ) : React.createElement('div', { className: "text-center text-slate-400 py-10" }, "Žádné nové zprávy.")
                         )
                     )
                 )
