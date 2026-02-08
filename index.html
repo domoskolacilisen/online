@@ -98,13 +98,77 @@
             School, CheckCircle, Check, Layers, UploadCloud, Bell,
             UserCircle, LayoutGrid, FileCheck, Lock, Globe, Users,
             ArrowLeft, FileOutput, ChevronDown, Eye, EyeOff, CheckSquare, Square, UserPlus,
-            ToggleLeft, ToggleRight, Tag
+            ToggleLeft, ToggleRight, Tag, Link, ExternalLink, Calendar
         } from 'lucide-react';
 
         // --- KONFIGURACE ---
         const DEFAULT_API_URL = "https://script.google.com/macros/s/AKfycbwYrc9z4UmbZ8JKYK8Gtr03ukacuA51weoGhUtAEYjv5y1ilLWpwwIslilhy3NnnWAgCw/exec";
         const GENERAL_INFO_LABEL = "Obecné informace";
         const ITEMS_PER_PAGE = 9;
+
+        const ConfirmModal = ({ show, title, message, onConfirm, onCancel }) => {
+            if (!show) return null;
+            return React.createElement('div', { className: "fixed inset-0 z-[100] flex items-center justify-center p-6 modal-overlay", onClick: onCancel },
+                React.createElement('div', { className: "bg-white rounded-[2rem] shadow-2xl w-full max-w-sm p-8 animate-in relative flex flex-col items-center text-center", onClick: e => e.stopPropagation() },
+                    React.createElement('div', { className: "w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center mb-4" }, React.createElement(Trash2, { size: 32 })),
+                    React.createElement('h3', { className: "text-xl font-bold text-slate-800 mb-2" }, title || "Opravdu smazat?"),
+                    React.createElement('p', { className: "text-slate-500 text-sm mb-8" }, message || "Tato akce je nevratná."),
+                    React.createElement('div', { className: "flex gap-4 w-full" },
+                        React.createElement('button', { onClick: onCancel, className: "flex-1 py-3 bg-slate-100 text-slate-500 font-bold uppercase text-xs rounded-xl hover:bg-slate-200 transition-colors" }, "Zrušit"),
+                        React.createElement('button', { onClick: onConfirm, className: "flex-1 py-3 bg-red-600 text-white font-bold uppercase text-xs rounded-xl hover:bg-red-700 transition-colors" }, "Smazat")
+                    )
+                )
+            );
+        };
+
+        const Timeline = () => {
+             const [todayPos, setTodayPos] = useState(0);
+             const [currentMonth, setCurrentMonth] = useState(0);
+
+             useEffect(() => {
+                 const now = new Date();
+                 const start = new Date(now.getFullYear(), 0, 1); // Jan 1st
+                 const diff = now - start;
+                 const oneDay = 1000 * 60 * 60 * 24;
+                 const dayOfYear = Math.floor(diff / oneDay);
+                 
+                 // Calc position percentage (approx)
+                 const pos = (dayOfYear / 365) * 100;
+                 setTodayPos(pos);
+                 setCurrentMonth(now.getMonth()); // 0 = Jan
+             }, []);
+
+             const months = ["Led", "Úno", "Bře", "Dub", "Kvě", "Čer", "Čvc", "Srp", "Zář", "Říj", "Lis", "Pro"];
+             // Shifted for school year display: Sep(8) to Aug(7)
+             // But simple linear year view is often easier visually or split.
+             // Proposed structure: 1. Pol (IX-I), 2. Pol (II-VI), Prazdniny (VII-VIII)
+             
+             // Let's render a bar representing the school year flow or just calendar year?
+             // School year is better for students. 
+             // Logic: If today is Aug, pos is near end. If Sep, pos is start.
+             
+             return React.createElement('div', { className: "w-full bg-white border-b border-blue-100 py-2 sticky top-20 z-30 shadow-sm overflow-hidden" },
+                React.createElement('div', { className: "max-w-7xl mx-auto px-6 relative h-10 flex items-center" },
+                    // 1. Pololetí (Září - Leden) ~ 5 měsíců ~ 41%
+                    React.createElement('div', { className: "flex-1 h-2 bg-blue-100 rounded-l-full relative mx-1" },
+                        React.createElement('span', { className: "absolute -top-4 left-2 text-[9px] font-bold text-blue-300 uppercase" }, "1. Pololetí"),
+                        [8, 9, 10, 11, 0].includes(currentMonth) && React.createElement('div', { className: "absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-red-500 rounded-full border-2 border-white shadow-sm z-10", style: { left: '50%' }, title: "Dnes" }) // Simplified centering for active sem
+                    ),
+                    // 2. Pololetí (Únor - Červen) ~ 5 měsíců ~ 41%
+                    React.createElement('div', { className: "flex-1 h-2 bg-green-100 relative mx-1" },
+                        React.createElement('span', { className: "absolute -top-4 left-2 text-[9px] font-bold text-green-300 uppercase" }, "2. Pololetí"),
+                        [1, 2, 3, 4, 5].includes(currentMonth) && React.createElement('div', { className: "absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-red-500 rounded-full border-2 border-white shadow-sm z-10", style: { left: '50%' }, title: "Dnes" })
+                    ),
+                    // Prázdniny (Červenec - Srpen) ~ 2 měsíce ~ 16%
+                    React.createElement('div', { className: "w-[16%] h-2 bg-amber-100 rounded-r-full relative mx-1" },
+                        React.createElement('span', { className: "absolute -top-4 left-2 text-[9px] font-bold text-amber-300 uppercase" }, "Prázdniny"),
+                        [6, 7].includes(currentMonth) && React.createElement('div', { className: "absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-red-500 rounded-full border-2 border-white shadow-sm z-10", style: { left: '50%' }, title: "Dnes" })
+                    ),
+                    // Global marker label
+                    React.createElement('div', { className: "absolute right-0 -bottom-1 text-[9px] font-bold text-slate-300" }, new Date().getFullYear())
+                )
+             );
+        };
 
         const App = () => {
             // --- STATE ---
@@ -124,17 +188,18 @@
             // New Filter States
             const [filterType, setFilterType] = useState("Vše");
             const [filterTag, setFilterTag] = useState("Vše");
-            // REMOVED: filterClassAdditional - not needed
 
             const [selectedItems, setSelectedItems] = useState([]);
             const [processingIds, setProcessingIds] = useState([]);
-            const [toast, setToast] = useState(null);
+            const [toast, setToast] = useState(null); // String or {msg, type}
             
             const [showUploadModal, setShowUploadModal] = useState(false);
             const [showEditModal, setShowEditModal] = useState(null);
             const [showNewsModal, setShowNewsModal] = useState(false);
             const [showProfileModal, setShowProfileModal] = useState(false);
             
+            const [confirmModal, setConfirmModal] = useState({ show: false, title: '', message: '', onConfirm: null });
+
             // Student Management State
             const [selectedStudent, setSelectedStudent] = useState(null);
             const [showStudentModal, setShowStudentModal] = useState(false);
@@ -152,9 +217,9 @@
             const [loginInput, setLoginInput] = useState('');
             const [pinInput, setPinInput] = useState('');
 
-            // Upload State (Materials)
+            // Upload State (Materials) - Added odkazWeb, obdobi
             const [uploadFile, setUploadFile] = useState(null);
-            const [uploadMeta, setUploadMeta] = useState({ nazev: '', poznamka: '', trida: '', predmet: '', typ: '', tagy: '', cilovaSkupina: 'all' });
+            const [uploadMeta, setUploadMeta] = useState({ nazev: '', poznamka: '', trida: '', predmet: '', typ: '', tagy: '', cilovaSkupina: 'all', odkazWeb: '', obdobi: '0' });
             const [isUploading, setIsUploading] = useState(false);
 
             // Edit State (File Replacement)
@@ -170,12 +235,22 @@
 
             // User Profile State
             const [profileConfig, setProfileConfig] = useState({ mojeTrida: '', emailRodice: '', vek: '', kmenovaSkola: '' });
+            
+            // Current Semester Calc
+            const [currentSemester, setCurrentSemester] = useState(0); // 1, 2 or 0 (unknown/holiday)
 
 
             // --- INIT ---
             useEffect(() => {
                 const saved = localStorage.getItem('domoskola_user');
                 if (saved) setUser(JSON.parse(saved));
+                
+                const month = new Date().getMonth(); // 0 = Jan
+                // 1. Pol: Sep(8) - Jan(0) -> 8,9,10,11,0
+                // 2. Pol: Feb(1) - Jun(5) -> 1,2,3,4,5
+                if ([8, 9, 10, 11, 0].includes(month)) setCurrentSemester(1);
+                else if ([1, 2, 3, 4, 5].includes(month)) setCurrentSemester(2);
+                else setCurrentSemester(0); // Holidays
             }, []);
 
             useEffect(() => {
@@ -243,7 +318,7 @@
                     }));
                 } catch (e) { 
                     console.error(e);
-                    setToast("Chyba načítání dat");
+                    setToast({ msg: "Chyba načítání dat", type: "error" });
                 } 
                 finally { setLoading(false); }
             };
@@ -252,6 +327,12 @@
             const handleLogout = () => {
                 localStorage.removeItem('domoskola_user');
                 window.location.reload();
+            };
+            
+            const showToast = (msg, type = 'success') => setToast({ msg, type });
+
+            const openConfirm = (title, message, onConfirm) => {
+                setConfirmModal({ show: true, title, message, onConfirm: () => { onConfirm(); setConfirmModal({ show: false, title: '', message: '', onConfirm: null }); } });
             };
 
             const handleLogin = (e) => {
@@ -296,15 +377,15 @@
                     localStorage.setItem('domoskola_user', JSON.stringify(updatedUser));
                     
                     setShowProfileModal(false);
-                    setToast("Profil aktualizován");
+                    showToast("Profil aktualizován");
                     if (profileConfig.mojeTrida) setActiveGrade(profileConfig.mojeTrida);
-                } catch (err) { alert("Chyba ukládání: " + err); } 
+                } catch (err) { showToast("Chyba ukládání: " + err, 'error'); } 
                 finally { setLoading(false); }
             };
 
             const handleCreateStudent = async (e) => {
                 e.preventDefault();
-                if(!newStudent.login || !newStudent.pin || !newStudent.jmeno) return alert("Vyplňte povinná pole (Jméno, Login, PIN)");
+                if(!newStudent.login || !newStudent.pin || !newStudent.jmeno) return showToast("Vyplňte povinná pole (Jméno, Login, PIN)", 'error');
                 
                 setLoading(true);
                 try {
@@ -315,12 +396,12 @@
                     const json = await res.json();
                     if(json.error) throw new Error(json.error);
                     
-                    setToast("Žák úspěšně vytvořen");
+                    showToast("Žák úspěšně vytvořen");
                     setShowStudentModal(false);
                     setNewStudent({ jmeno: '', login: '', pin: '', mojeTrida: '', typStudenta: 'interni', emailRodice: '', vek: '', kmenovaSkola: '' });
                     loadData();
                 } catch(err) {
-                    alert("Chyba: " + err.message);
+                    showToast("Chyba: " + err.message, 'error');
                 } finally {
                     setLoading(false);
                 }
@@ -337,7 +418,7 @@
                     const json = await res.json();
                     if(json.error) throw new Error(json.error);
                     
-                    setToast("Údaje uloženy");
+                    showToast("Údaje uloženy");
                     // Aktualizace lokálních dat
                     const updatedUser = { ...selectedStudent, ...adminStudentData };
                     setSelectedStudent(updatedUser);
@@ -346,7 +427,7 @@
                         users: prev.users.map(u => u.login === updatedUser.login ? updatedUser : u)
                     }));
                 } catch(err) {
-                    alert("Chyba: " + err.message);
+                    showToast("Chyba: " + err.message, 'error');
                 } finally {
                     setLoading(false);
                 }
@@ -366,27 +447,27 @@
                 try { await fetch(DEFAULT_API_URL, { method: 'POST', body: JSON.stringify({ action: 'toggleProgress', login: user.login, materialId: materialId }) }); } catch(e) {}
             };
 
-            const handleDeletePersonalDoc = async (e, docId) => {
+            const handleDeletePersonalDoc = (e, docId) => {
                 e.stopPropagation();
-                if(!confirm("Opravdu smazat tento dokument?")) return;
-                
-                setData(prev => ({
-                    ...prev,
-                    personalDocs: prev.personalDocs.filter(d => d.id !== docId)
-                }));
+                openConfirm("Smazat dokument?", "Opravdu chcete smazat tento osobní dokument?", async () => {
+                    setData(prev => ({
+                        ...prev,
+                        personalDocs: prev.personalDocs.filter(d => d.id !== docId)
+                    }));
 
-                try {
-                    await fetch(DEFAULT_API_URL, { method: 'POST', body: JSON.stringify({ action: 'deletePersonalDoc', id: docId }) });
-                    setToast("Dokument smazán");
-                } catch(err) {
-                    alert("Chyba mazání: " + err);
-                    loadData();
-                }
+                    try {
+                        await fetch(DEFAULT_API_URL, { method: 'POST', body: JSON.stringify({ action: 'deletePersonalDoc', id: docId }) });
+                        showToast("Dokument smazán");
+                    } catch(err) {
+                        showToast("Chyba mazání: " + err, 'error');
+                        loadData();
+                    }
+                });
             };
 
             const handleUploadSubmit = async (e) => {
                 e.preventDefault();
-                if (!uploadFile) return alert("Vyberte soubor");
+                if (!uploadFile && !uploadMeta.odkazWeb) return showToast("Vyberte soubor nebo zadejte odkaz", 'error');
                 setIsUploading(true);
                 
                 // Pokud je vybrána třída GENERAL_INFO_LABEL, nastavíme defaultní hodnoty pro předmět a typ
@@ -395,28 +476,37 @@
                     finalUploadMeta.predmet = "Info"; // Interní default
                     finalUploadMeta.typ = "Dokument"; // Interní default
                 }
-
-                const reader = new FileReader();
-                reader.onload = async () => {
-                    const base64String = reader.result.split(',')[1];
-                    try {
+                
+                const processUpload = async (base64String = null, mimeType = null, filename = null) => {
+                     try {
                         await fetch(DEFAULT_API_URL, { method: 'POST', body: JSON.stringify({
-                            action: 'upload', filename: uploadFile.name, mimeType: uploadFile.type, base64: base64String, ...finalUploadMeta
+                            action: 'upload', 
+                            filename, 
+                            mimeType, 
+                            base64: base64String, 
+                            ...finalUploadMeta
                         }) });
-                        setToast("Materiál úspěšně nahrán");
+                        showToast("Materiál úspěšně nahrán");
                         setShowUploadModal(false);
                         setUploadFile(null);
-                        setUploadMeta({ nazev: '', poznamka: '', trida: '', predmet: '', typ: '', tagy: '', cilovaSkupina: 'all' });
+                        setUploadMeta({ nazev: '', poznamka: '', trida: '', predmet: '', typ: '', tagy: '', cilovaSkupina: 'all', odkazWeb: '', obdobi: '0' });
                         loadData();
-                    } catch (err) { alert("Chyba nahrávání: " + err); } 
+                    } catch (err) { showToast("Chyba nahrávání: " + err, 'error'); } 
                     finally { setIsUploading(false); }
                 };
-                reader.readAsDataURL(uploadFile);
+
+                if (uploadFile) {
+                    const reader = new FileReader();
+                    reader.onload = () => processUpload(reader.result.split(',')[1], uploadFile.type, uploadFile.name);
+                    reader.readAsDataURL(uploadFile);
+                } else {
+                    processUpload();
+                }
             };
             
             const handlePersonalUpload = async (e) => {
                 e.preventDefault();
-                if (!personalUploadFile || !selectedStudent) return alert("Chyba");
+                if (!personalUploadFile || !selectedStudent) return showToast("Chyba", 'error');
                 setIsUploading(true);
                 const reader = new FileReader();
                 reader.onload = async () => {
@@ -430,11 +520,11 @@
                             mimeType: personalUploadFile.type, 
                             base64: base64String
                         }) });
-                        setToast("Hodnocení nahráno");
+                        showToast("Hodnocení nahráno");
                         setPersonalUploadFile(null);
                         setPersonalUploadName('');
                         loadData(); 
-                    } catch (err) { alert("Chyba nahrávání: " + err); } 
+                    } catch (err) { showToast("Chyba nahrávání: " + err, 'error'); } 
                     finally { setIsUploading(false); }
                 };
                 reader.readAsDataURL(personalUploadFile);
@@ -451,8 +541,8 @@
                 }
                 try {
                     await fetch(DEFAULT_API_URL, { method: 'POST', body: JSON.stringify({ action, ids, ...extraData }) });
-                    setToast("Změny uloženy");
-                } catch (e) { alert("Chyba akce"); } 
+                    showToast("Změny uloženy");
+                } catch (e) { showToast("Chyba akce", 'error'); } 
                 finally { setProcessingIds(prev => prev.filter(pid => !ids.includes(pid))); }
             };
 
@@ -493,14 +583,15 @@
                     setNewConfig({kategorie: 'Predmet', nazev: '', hodnota: 'seda'});
                     await fetch(DEFAULT_API_URL, { method: 'POST', body: JSON.stringify({ action: 'saveConfig', item: itemToSave }) });
                 }
-                setToast("Nastavení uloženo");
+                showToast("Nastavení uloženo");
             };
 
-            const handleConfigDelete = async (item) => {
-                if(!confirm("Opravdu smazat?")) return;
-                setData(prev => ({...prev, config: prev.config.filter(c => c !== item)}));
-                await fetch(DEFAULT_API_URL, { method: 'POST', body: JSON.stringify({ action: 'deleteConfig', item }) });
-                setToast("Položka smazána");
+            const handleConfigDelete = (item) => {
+                openConfirm("Smazat položku?", `Opravdu smazat ${item.nazev}?`, async () => {
+                    setData(prev => ({...prev, config: prev.config.filter(c => c !== item)}));
+                    await fetch(DEFAULT_API_URL, { method: 'POST', body: JSON.stringify({ action: 'deleteConfig', item }) });
+                    showToast("Položka smazána");
+                });
             };
 
             const getCardColor = (predmetName) => {
@@ -529,6 +620,12 @@
                 const parts = isoString.split('-');
                 if (parts.length !== 3) return isoString;
                 return `${parseInt(parts[2])}. ${parseInt(parts[1])}. ${parts[0]}`;
+            };
+            
+            const getObdobiLabel = (val) => {
+                if (val == 1) return "1. Pololetí";
+                if (val == 2) return "2. Pololetí";
+                return "Celoroční";
             };
 
             const handleHomeClick = () => {
@@ -595,14 +692,7 @@
             };
 
             const filteredMaterials = getFilteredMaterials().sort((a, b) => {
-                if (viewMode === 'portal') {
-                    const aDone = isDone(a.id);
-                    const bDone = isDone(b.id);
-                    if (user.role !== 'admin') {
-                        if (aDone && !bDone) return 1;
-                        if (!aDone && bDone) return -1;
-                    }
-                }
+                // PRIMÁRNĚ JEN DATUM (a status/done neovlivňuje pořadí, jen vzhled)
                 return new Date(b.datum).getTime() - new Date(a.datum).getTime();
             });
 
@@ -647,21 +737,24 @@
                         ),
                         React.createElement('button', { onClick: () => setShowProfileModal(true), className: "hidden sm:flex items-center gap-3 hover:bg-slate-50 p-2 rounded-2xl transition-colors text-right" },
                             React.createElement('div', { className: "leading-none" },
-                                React.createElement('div', { className: "text-[11px] font-bold uppercase text-blue-900" }, user.jmeno),
-                                React.createElement('div', { className: "text-[10px] font-bold text-blue-300 uppercase mt-1 tracking-widest flex items-center gap-1 justify-end" }, 
-                                    React.createElement(Globe, { size: 8 }), user.mojeTrida || user.typStudenta
+                                React.createElement('div', { className: "text-lg font-bold uppercase text-blue-900" }, user.jmeno),
+                                React.createElement('div', { className: "text-sm font-bold text-blue-600 uppercase mt-1 tracking-widest flex items-center gap-1 justify-end" }, 
+                                    React.createElement(Globe, { size: 10 }), user.mojeTrida || user.typStudenta
                                 )
                             ),
-                            React.createElement('div', { className: "w-10 h-10 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-bold" }, React.createElement(UserCircle, { size: 20 }))
+                            React.createElement('div', { className: "w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-bold" }, React.createElement(UserCircle, { size: 28 }))
                         ),
                         React.createElement('button', { onClick: handleLogout, className: "p-3 bg-slate-50 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-2xl transition-all", title: "Odhlásit se" }, React.createElement(LogOut, { className: "w-5 h-5" }))
                     )
                 ),
                 
+                // TIMELINE (New)
+                viewMode === 'portal' && React.createElement(Timeline),
+
                 // MAIN CONTAINER
                 React.createElement('div', { className: "max-w-7xl mx-auto p-6 flex flex-col md:flex-row gap-8 flex-1 w-full" },
                     // SIDEBAR - STICKY FIXED
-                    React.createElement('aside', { className: "md:w-60 flex-shrink-0 space-y-4 sticky top-24 pt-36 h-[calc(100vh-6rem)] overflow-y-auto custom-scroll pb-10" },
+                    React.createElement('aside', { className: "md:w-60 flex-shrink-0 space-y-4 sticky top-36 pt-4 h-[calc(100vh-9rem)] overflow-y-auto custom-scroll pb-10" },
                         React.createElement('div', { className: "flex flex-col gap-1 bg-white/50 p-2 rounded-[2rem] border border-blue-50 shadow-sm" },
                             React.createElement('h3', { className: "text-[9px] font-black text-blue-200 uppercase tracking-widest py-4 text-center" }, "Ročníky"),
                             user.typStudenta !== 'externi' && React.createElement('button', { onClick: () => { setActiveGrade("Vše"); setViewMode('portal'); }, className: `px-5 py-4 rounded-2xl font-bold text-xs text-left transition-all ${activeGrade === "Vše" && viewMode === 'portal' ? 'bg-blue-600 text-white shadow-xl translate-x-2' : 'text-slate-500 hover:bg-white hover:text-blue-600'}` }, "Vše"),
@@ -677,7 +770,7 @@
                     React.createElement('main', { className: "flex-1 min-w-0" },
                         viewMode === 'portal' && React.createElement('div', { className: "animate-in flex flex-col min-h-[80vh]" },
                             // STICKY HEADER WRAPPER
-                            React.createElement('div', { className: "sticky top-20 z-30 bg-slate-50 pt-2 pb-2" },
+                            React.createElement('div', { className: "sticky top-[8rem] z-20 bg-slate-50 pt-2 pb-2" },
                                 React.createElement('div', { className: "flex items-center justify-between mb-4" },
                                     React.createElement('h2', { className: "text-3xl font-bold text-blue-900" }, activeGrade === "Vše" ? "Všechny studijní dokumenty" : (activeGrade === GENERAL_INFO_LABEL ? "Obecné školní materiály" : activeGrade)),
                                     React.createElement('div', { className: "flex gap-2" },
@@ -716,17 +809,20 @@
                             React.createElement('div', { className: "grid grid-cols-1 md:grid-cols-2 gap-8 pb-10 pt-4" },
                                 displayedMaterials.map(m => {
                                     const isGeneralMaterial = m.trida === GENERAL_INFO_LABEL;
-                                    // Pokud je to obecný materiál, použijeme hnědou barvu, jinak barvu předmětu
                                     const color = isGeneralMaterial ? 'hneda' : getCardColor(m.predmet);
                                     
                                     const isInactiveForAdmin = user.role === 'admin' && m.status !== 'publikovano';
                                     const done = isDone(m.id);
                                     const doneDate = done ? getProgressDate(m.id) : null;
                                     
-                                    // Pokud je inactive pro admina, použijeme šedou třídu, ale texty přebarvíme inline
                                     const cardClass = isInactiveForAdmin 
                                         ? 'card-inactive' 
                                         : (done ? 'card-done' : `card-${color}`);
+                                        
+                                    // Visual logic for Semesters
+                                    const itemSem = m.obdobi || '0'; // 0, 1, 2
+                                    const isCurrentSem = (itemSem == 0) || (itemSem == currentSemester);
+                                    const btnOpacityClass = isCurrentSem ? '' : 'opacity-40 hover:opacity-100';
 
                                     return React.createElement('div', { key: m.id, className: `${cardClass} border-2 rounded-[2rem] p-8 hover:shadow-xl transition-all group flex flex-col justify-between relative` },
                                         user.role === 'admin' && React.createElement('div', { className: "absolute top-4 right-4 flex gap-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity" },
@@ -736,7 +832,7 @@
                                             )
                                         ),
                                         React.createElement('div', null,
-                                            React.createElement('div', { className: "flex flex-wrap gap-2 mb-6" },
+                                            React.createElement('div', { className: "flex flex-wrap gap-2 mb-6 items-center" },
                                                 isGeneralMaterial ? (
                                                     m.tagy && React.createElement('span', { className: "px-3 py-1 text-[9px] font-bold uppercase rounded-full border border-current opacity-70 font-mono bg-white/50" }, `#${m.tagy}`)
                                                 ) : (
@@ -745,7 +841,9 @@
                                                         React.createElement('span', { className: "px-3 py-1 text-[9px] font-bold uppercase rounded-full border border-current opacity-70 font-mono bg-white/50" }, m.trida),
                                                         React.createElement('span', { className: "px-3 py-1 text-[9px] font-bold uppercase rounded-full border border-current opacity-70 font-mono bg-white/50" }, m.typ)
                                                     )
-                                                )
+                                                ),
+                                                // Semester Badge
+                                                m.obdobi && m.obdobi != '0' && React.createElement('span', { className: "ml-auto px-2 py-0.5 rounded text-[9px] font-bold uppercase bg-white/60 text-slate-500 border border-slate-200" }, m.obdobi + ". Pol")
                                             ),
                                             React.createElement('div', { className: "flex items-center gap-2 mb-2" },
                                                 m.cilovaSkupina === 'interni' && React.createElement('div', { className: "flex items-center gap-1 text-purple-600 font-bold text-[10px] uppercase bg-purple-50 px-2 rounded-full" }, React.createElement(Lock, { size: 10 }), "Interní"),
@@ -763,7 +861,8 @@
                                                     : (done && React.createElement('span', { className: "done-info flex items-center gap-1" }, React.createElement(CheckCircle, { size: 12 }), "HOTOVO ", doneDate))
                                             ),
                                             React.createElement('div', { className: "flex gap-3" },
-                                                React.createElement('a', { href: m.odkaz, target: "_blank", rel: "noreferrer", className: `action-btn flex-1 flex items-center justify-center gap-3 text-white py-4 rounded-2xl text-[11px] font-bold uppercase shadow-lg active:scale-95 transition-transform btn-${color}` }, m.typ.includes('Video') ? React.createElement(Video, { size: 16 }) : React.createElement(FileText, { size: 16 }), " Otevřít"),
+                                                m.odkaz && React.createElement('a', { href: m.odkaz, target: "_blank", rel: "noreferrer", className: `action-btn flex-1 flex items-center justify-center gap-3 text-white py-4 rounded-2xl text-[11px] font-bold uppercase shadow-lg active:scale-95 transition-all btn-${color} ${btnOpacityClass}` }, m.typ.includes('Video') ? React.createElement(Video, { size: 16 }) : React.createElement(FileText, { size: 16 }), " Soubor"),
+                                                m.odkazWeb && React.createElement('a', { href: m.odkazWeb, target: "_blank", rel: "noreferrer", className: `action-btn flex-1 flex items-center justify-center gap-3 text-white py-4 rounded-2xl text-[11px] font-bold uppercase shadow-lg active:scale-95 transition-all btn-${color} ${btnOpacityClass}` }, React.createElement(Globe, { size: 16 }), " Web"),
                                                 user.role !== 'admin' && !isGeneralMaterial && React.createElement('button', { onClick: () => handleToggleProgress(m.id), className: `px-4 flex items-center justify-center gap-2 rounded-2xl border-2 transition-all font-bold uppercase text-[9px] ${done ? 'bg-emerald-100 border-emerald-300 text-emerald-600' : 'bg-white border-slate-200 text-slate-400 hover:border-blue-300 hover:text-blue-600'}` }, 
                                                     done ? React.createElement(React.Fragment, null, React.createElement(CheckSquare, { size: 16 }), "Splněno") : React.createElement(React.Fragment, null, React.createElement(Square, { size: 16 }), "Označit")
                                                 )
@@ -1066,8 +1165,171 @@
 
                 // TOAST
                 toast && React.createElement('div', { className: "fixed bottom-8 left-1/2 -translate-x-1/2 z-[100] animate-in" },
-                    React.createElement('div', { className: "bg-blue-600 text-white px-8 py-4 rounded-full shadow-2xl font-bold uppercase text-[10px] tracking-widest flex items-center gap-3" },
-                        React.createElement(CheckCircle, { className: "w-4 h-4 text-emerald-400" }), toast
+                    React.createElement('div', { className: `${toast.type === 'error' ? 'bg-red-600' : 'bg-blue-600'} text-white px-8 py-4 rounded-full shadow-2xl font-bold uppercase text-[10px] tracking-widest flex items-center gap-3` },
+                        React.createElement(toast.type === 'error' ? X : CheckCircle, { className: "w-4 h-4 text-white/80" }), toast.msg
+                    )
+                ),
+
+                // CONFIRM MODAL
+                React.createElement(ConfirmModal, { ...confirmModal, onCancel: () => setConfirmModal({...confirmModal, show: false}) }),
+
+                // UPLOAD MODAL
+                showUploadModal && React.createElement('div', { className: "fixed inset-0 z-50 flex items-center justify-center p-6 modal-overlay", onClick: () => setShowUploadModal(false) },
+                    React.createElement('div', { className: "bg-white rounded-[3.5rem] shadow-2xl w-full max-w-xl p-12 animate-in relative overflow-hidden flex flex-col max-h-[85vh]", onClick: e => e.stopPropagation() },
+                        isUploading && React.createElement('div', { className: "absolute inset-0 bg-white/90 z-20 flex flex-col items-center justify-center text-blue-600 font-bold uppercase text-xs" },
+                             React.createElement(Loader2, { className: "animate-spin w-8 h-8 mb-2" }), " Ukládám podklady..."
+                        ),
+                        React.createElement('div', { className: "flex justify-between items-center mb-6 shrink-0" },
+                            React.createElement('h2', { className: "text-2xl font-bold text-blue-900 uppercase" }, "Nový materiál"),
+                            React.createElement('button', { onClick: () => setShowUploadModal(false), className: "text-slate-300 hover:text-slate-500 transition-all" }, React.createElement(X, { className: "w-8 h-8" }))
+                        ),
+                        React.createElement('form', { onSubmit: handleUploadSubmit, className: "space-y-4 text-sm overflow-y-auto custom-scroll pr-2" },
+                            React.createElement('div', { className: "p-4 bg-slate-50 rounded-2xl border border-slate-100 mb-4" },
+                                React.createElement('label', { className: "text-[10px] font-bold uppercase text-slate-400 ml-2 block mb-2" }, "Soubor nebo Odkaz (Zadejte alespoň jedno)"),
+                                React.createElement('div', { className: "flex gap-4" },
+                                    React.createElement('div', { className: "relative flex-1" },
+                                        React.createElement('input', { type: "file", onChange: e => setUploadFile(e.target.files ? e.target.files[0] : null), className: "hidden", id: "file-upload" }),
+                                        React.createElement('label', { htmlFor: "file-upload", className: "w-full p-3 bg-white border border-dashed border-blue-200 rounded-xl flex items-center justify-center gap-2 text-slate-500 cursor-pointer hover:bg-blue-50 transition-colors h-full" },
+                                            React.createElement(UploadCloud, { className: "w-4 h-4 text-blue-400" }),
+                                            uploadFile ? React.createElement('span', { className: "text-blue-600 font-bold truncate max-w-[100px]" }, uploadFile.name) : "Nahrát soubor"
+                                        )
+                                    ),
+                                    React.createElement('div', { className: "flex-1" },
+                                        React.createElement('input', { value: uploadMeta.odkazWeb, onChange: e => setUploadMeta({...uploadMeta, odkazWeb: e.target.value}), placeholder: "https://www...", className: "w-full p-3 bg-white border rounded-xl outline-none focus:ring-2 focus:ring-blue-600 transition-all h-full" })
+                                    )
+                                )
+                            ),
+                            React.createElement('div', null, React.createElement('label', { className: "text-[10px] font-bold uppercase text-slate-400 ml-2 block mb-1" }, "Název"), React.createElement('input', { value: uploadMeta.nazev, onChange: e => setUploadMeta({...uploadMeta, nazev: e.target.value}), placeholder: "Co děti uvidí na kartě", required: true, className: "w-full p-4 bg-slate-50 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 transition-all" })),
+                            React.createElement('div', null, React.createElement('label', { className: "text-[10px] font-bold uppercase text-slate-400 ml-2 block mb-1" }, "Popisek / Poznámka"), React.createElement('textarea', { value: uploadMeta.poznamka, onChange: e => setUploadMeta({...uploadMeta, poznamka: e.target.value}), placeholder: "Krátký popis obsahu...", className: "w-full p-4 bg-slate-50 border rounded-2xl h-24 outline-none focus:ring-2 focus:ring-blue-600 transition-all" })),
+                            
+                            React.createElement('div', { className: "grid grid-cols-2 gap-4" },
+                                React.createElement('div', null,
+                                    React.createElement('label', { className: "text-[10px] font-bold uppercase text-slate-400 ml-2 block mb-1" }, "Třída"),
+                                    React.createElement('select', { value: uploadMeta.trida, onChange: e => setUploadMeta({...uploadMeta, trida: e.target.value}), required: true, className: "w-full p-4 bg-slate-50 border rounded-2xl outline-none" },
+                                        React.createElement('option', { value: "", disabled: true }, "Vybrat"),
+                                        React.createElement('option', { value: GENERAL_INFO_LABEL, className: "text-blue-600 font-bold" }, `📌 ${GENERAL_INFO_LABEL}`),
+                                        data.config.filter(c => c.kategorie === 'Trida').map(c => c.nazev).sort().map(g => React.createElement('option', { key: g }, g))
+                                    )
+                                ),
+                                uploadMeta.trida !== GENERAL_INFO_LABEL && React.createElement('div', null,
+                                    React.createElement('label', { className: "text-[10px] font-bold uppercase text-slate-400 ml-2 block mb-1" }, "Předmět"),
+                                    React.createElement('select', { value: uploadMeta.predmet, onChange: e => setUploadMeta({...uploadMeta, predmet: e.target.value}), required: true, className: "w-full p-4 bg-slate-50 border rounded-2xl outline-none" },
+                                        React.createElement('option', { value: "", disabled: true }, "Vybrat"),
+                                        uniqueSubjects.filter(s => s !== 'Vše').map(s => React.createElement('option', { key: s }, s))
+                                    )
+                                )
+                            ),
+                             React.createElement('div', { className: "grid grid-cols-2 gap-4" },
+                                uploadMeta.trida !== GENERAL_INFO_LABEL && React.createElement('div', null,
+                                    React.createElement('label', { className: "text-[10px] font-bold uppercase text-slate-400 ml-2 block mb-1" }, "Typ"),
+                                    React.createElement('select', { value: uploadMeta.typ, onChange: e => setUploadMeta({...uploadMeta, typ: e.target.value}), required: true, className: "w-full p-4 bg-slate-50 border rounded-2xl outline-none" },
+                                        React.createElement('option', { value: "", disabled: true }, "Vybrat"),
+                                        data.config.filter(c => c.kategorie === 'Typ').map(t => React.createElement('option', { key: t.nazev }, t.nazev))
+                                    )
+                                ),
+                                React.createElement('div', null,
+                                     React.createElement('label', { className: "text-[10px] font-bold uppercase text-slate-400 ml-2 block mb-1" }, "Období"),
+                                     React.createElement('select', { value: uploadMeta.obdobi, onChange: e => setUploadMeta({...uploadMeta, obdobi: e.target.value}), className: "w-full p-4 bg-slate-50 border rounded-2xl outline-none" },
+                                        React.createElement('option', { value: "0" }, "Celoroční / Neurčeno"),
+                                        React.createElement('option', { value: "1" }, "1. Pololetí (Září - Leden)"),
+                                        React.createElement('option', { value: "2" }, "2. Pololetí (Únor - Červen)")
+                                    )
+                                )
+                            ),
+                            React.createElement('div', { className: "grid grid-cols-2 gap-4" },
+                                React.createElement('div', null,
+                                     React.createElement('label', { className: "text-[10px] font-bold uppercase text-slate-400 ml-2 block mb-1" }, "Cílová skupina"),
+                                     React.createElement('select', { value: uploadMeta.cilovaSkupina, onChange: e => setUploadMeta({...uploadMeta, cilovaSkupina: e.target.value}), className: "w-full p-4 bg-slate-50 border rounded-2xl outline-none" },
+                                        React.createElement('option', { value: "all" }, "Všichni"),
+                                        React.createElement('option', { value: "interni" }, "Pouze Interní"),
+                                        React.createElement('option', { value: "externi" }, "Pouze Externí")
+                                    )
+                                ),
+                                React.createElement('div', null, 
+                                    React.createElement('label', { className: "text-[10px] font-bold uppercase text-slate-400 ml-2 block mb-1" }, "Tagy (#...)"), 
+                                    React.createElement('input', { value: uploadMeta.tagy, onChange: e => setUploadMeta({...uploadMeta, tagy: e.target.value}), list: "tag-suggestions", placeholder: "např. gramatika", className: "w-full p-4 bg-slate-50 border rounded-2xl outline-none" })
+                                )
+                            ),
+                            
+                            React.createElement('button', { className: "w-full bg-emerald-600 text-white py-5 rounded-[2rem] font-bold uppercase shadow-xl hover:bg-emerald-700 transition-all mt-4 active:scale-95" }, "Publikovat do studovny")
+                        )
+                    )
+                ),
+
+                // EDIT MODAL
+                showEditModal && React.createElement('div', { className: "fixed inset-0 z-50 flex items-center justify-center p-6 modal-overlay", onClick: () => setShowEditModal(null) },
+                    React.createElement('div', { className: "bg-white rounded-[3.5rem] shadow-2xl w-full max-w-xl p-12 animate-in relative flex flex-col max-h-[85vh]", onClick: e => e.stopPropagation() },
+                        isUploading && React.createElement('div', { className: "absolute inset-0 bg-white/90 z-20 flex flex-col items-center justify-center text-blue-600 font-bold uppercase text-xs" },
+                             React.createElement(Loader2, { className: "animate-spin w-8 h-8 mb-2" }), " Aktualizuji..."
+                        ),
+                        React.createElement('div', { className: "flex justify-between items-center mb-6 shrink-0" }, React.createElement('h2', { className: "text-2xl font-bold text-blue-900 uppercase" }, "Upravit informace"), React.createElement('button', { onClick: () => setShowEditModal(null), className: "text-slate-300 hover:text-red-500 transition-all" }, React.createElement(X, { className: "w-8 h-8" }))),
+                        React.createElement('form', { onSubmit: handleEditSubmit, className: "space-y-4 text-sm overflow-y-auto custom-scroll pr-2" },
+                            React.createElement('div', { className: "p-4 bg-slate-50 rounded-2xl border border-slate-100 mb-4" },
+                                React.createElement('label', { className: "text-[10px] font-bold uppercase text-slate-400 ml-2 block mb-2" }, "Webový Odkaz (Doplněk)"),
+                                React.createElement('input', { value: showEditModal.odkazWeb || '', onChange: e => setShowEditModal({...showEditModal, odkazWeb: e.target.value}), placeholder: "https://www...", className: "w-full p-3 bg-white border rounded-xl outline-none focus:ring-2 focus:ring-blue-600 transition-all" })
+                            ),
+                            React.createElement('div', null, React.createElement('label', { className: "text-[10px] font-bold uppercase text-slate-400 ml-2 block mb-1" }, "Název materiálu"), React.createElement('input', { value: showEditModal.nazev, onChange: e => setShowEditModal({...showEditModal, nazev: e.target.value}), className: "w-full p-4 bg-slate-50 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 transition-all" })),
+                            React.createElement('div', null, React.createElement('label', { className: "text-[10px] font-bold uppercase text-slate-400 ml-2 block mb-1" }, "Popisek / Poznámka"), React.createElement('textarea', { value: showEditModal.poznamka, onChange: e => setShowEditModal({...showEditModal, poznamka: e.target.value}), className: "w-full p-4 bg-slate-50 border rounded-2xl h-24 outline-none focus:ring-2 focus:ring-blue-600 transition-all" })),
+                             React.createElement('div', { className: "grid grid-cols-2 gap-4" },
+                                React.createElement('div', null,
+                                    React.createElement('label', { className: "text-[10px] font-bold uppercase text-slate-400 ml-2 block mb-1" }, "Třída"),
+                                    React.createElement('select', { value: showEditModal.trida, onChange: e => setShowEditModal({...showEditModal, trida: e.target.value}), className: "w-full p-4 bg-slate-50 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-600" },
+                                        React.createElement('option', { value: GENERAL_INFO_LABEL }, GENERAL_INFO_LABEL),
+                                        data.config.filter(c => c.kategorie === 'Trida').map(c => c.nazev).sort().map(g => React.createElement('option', { key: g }, g))
+                                    )
+                                ),
+                                React.createElement('div', null,
+                                    React.createElement('label', { className: "text-[10px] font-bold uppercase text-slate-400 ml-2 block mb-1" }, "Předmět"),
+                                    React.createElement('select', { value: showEditModal.predmet, onChange: e => setShowEditModal({...showEditModal, predmet: e.target.value}), className: "w-full p-4 bg-slate-50 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-600" },
+                                         uniqueSubjects.filter(s => s !== 'Vše').map(s => React.createElement('option', { key: s }, s))
+                                    )
+                                )
+                            ),
+                            React.createElement('div', { className: "grid grid-cols-2 gap-4" },
+                                React.createElement('div', null,
+                                    React.createElement('label', { className: "text-[10px] font-bold uppercase text-slate-400 ml-2 block mb-1" }, "Typ materiálu"),
+                                    React.createElement('select', { value: showEditModal.typ, onChange: e => setShowEditModal({...showEditModal, typ: e.target.value}), className: "w-full p-4 bg-slate-50 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-600" },
+                                        data.config.filter(c => c.kategorie === 'Typ').map(t => React.createElement('option', { key: t.nazev }, t.nazev))
+                                    )
+                                ),
+                                React.createElement('div', null,
+                                     React.createElement('label', { className: "text-[10px] font-bold uppercase text-slate-400 ml-2 block mb-1" }, "Období"),
+                                     React.createElement('select', { value: showEditModal.obdobi || '0', onChange: e => setShowEditModal({...showEditModal, obdobi: e.target.value}), className: "w-full p-4 bg-slate-50 border rounded-2xl outline-none" },
+                                        React.createElement('option', { value: "0" }, "Celoroční / Neurčeno"),
+                                        React.createElement('option', { value: "1" }, "1. Pololetí (Září - Leden)"),
+                                        React.createElement('option', { value: "2" }, "2. Pololetí (Únor - Červen)")
+                                    )
+                                )
+                            ),
+                            React.createElement('div', { className: "grid grid-cols-2 gap-4" },
+                                React.createElement('div', null,
+                                     React.createElement('label', { className: "text-[10px] font-bold uppercase text-slate-400 ml-2 block mb-1" }, "Cílová skupina"),
+                                     React.createElement('select', { value: showEditModal.cilovaSkupina || 'all', onChange: e => setShowEditModal({...showEditModal, cilovaSkupina: e.target.value}), className: "w-full p-4 bg-slate-50 border rounded-2xl outline-none" },
+                                        React.createElement('option', { value: "all" }, "Všichni"),
+                                        React.createElement('option', { value: "interni" }, "Pouze Interní"),
+                                        React.createElement('option', { value: "externi" }, "Pouze Externí")
+                                    )
+                                ),
+                                React.createElement('div', null, 
+                                    React.createElement('label', { className: "text-[10px] font-bold uppercase text-slate-400 ml-2 block mb-1" }, "Tagy (#...)"), 
+                                    React.createElement('input', { value: showEditModal.tagy, onChange: e => setShowEditModal({...showEditModal, tagy: e.target.value}), list: "tag-suggestions", className: "w-full p-4 bg-slate-50 border rounded-2xl text-sm outline-none" })
+                                )
+                            ),
+                            
+                            React.createElement('div', { className: "pt-4 border-t border-slate-100" },
+                                React.createElement('label', { className: "text-[10px] font-bold uppercase text-red-400 ml-2 block mb-1" }, "Nahradit soubor (Volitelné)"),
+                                React.createElement('div', { className: "relative" },
+                                    React.createElement('input', { type: "file", onChange: e => setEditFile(e.target.files ? e.target.files[0] : null), className: "hidden", id: "file-edit-upload" }),
+                                    React.createElement('label', { htmlFor: "file-edit-upload", className: "w-full p-3 bg-red-50 border border-dashed border-red-200 rounded-2xl flex items-center justify-center gap-3 text-slate-500 cursor-pointer hover:bg-red-100 transition-colors" },
+                                        React.createElement(UploadCloud, { className: "w-4 h-4 text-red-400" }),
+                                        editFile ? React.createElement('span', { className: "text-red-600 font-bold" }, editFile.name) : "Nahrát novou verzi..."
+                                    )
+                                ),
+                                React.createElement('p', { className: "text-[9px] text-slate-400 mt-1 ml-2" }, "Původní soubor zůstane na disku, ale odkaz v kartě se aktualizuje. Vazba na žáky (splněno) zůstane zachována.")
+                            ),
+
+                            React.createElement('button', { className: "w-full bg-blue-600 text-white py-5 rounded-[2rem] font-bold uppercase shadow-xl hover:bg-blue-700 transition-all mt-4" }, "Uložit změny")
+                        )
                     )
                 ),
 
@@ -1143,194 +1405,6 @@
                                     ) : React.createElement('div', { className: "text-slate-400 text-center text-sm py-4 italic" }, "Zatím žádná hodnocení.")
                                 )
                             )
-                        )
-                    )
-                ),
-
-                // STUDENT MODAL (NEW)
-                showStudentModal && React.createElement('div', { className: "fixed inset-0 z-50 flex items-center justify-center p-6 modal-overlay", onClick: () => setShowStudentModal(false) },
-                    React.createElement('div', { className: "bg-white rounded-[3.5rem] shadow-2xl w-full max-w-md p-10 animate-in relative flex flex-col", onClick: e => e.stopPropagation() },
-                        React.createElement('div', { className: "flex justify-between items-center mb-8 shrink-0" },
-                            React.createElement('h2', { className: "text-2xl font-bold text-blue-900 uppercase" }, "Nový žák"),
-                            React.createElement('button', { onClick: () => setShowStudentModal(false), className: "text-slate-300 hover:text-slate-500 transition-all" }, React.createElement(X, { className: "w-8 h-8" }))
-                        ),
-                        React.createElement('form', { onSubmit: handleCreateStudent, className: "space-y-4" },
-                            React.createElement('div', null,
-                                React.createElement('label', { className: "text-[10px] font-bold uppercase text-slate-400 ml-2 block mb-1" }, "Jméno a Příjmení"),
-                                React.createElement('input', { required: true, value: newStudent.jmeno, onChange: e => setNewStudent({...newStudent, jmeno: e.target.value}), className: "w-full p-4 bg-slate-50 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-600" })
-                            ),
-                            React.createElement('div', { className: "grid grid-cols-2 gap-4" },
-                                React.createElement('div', null,
-                                    React.createElement('label', { className: "text-[10px] font-bold uppercase text-slate-400 ml-2 block mb-1" }, "Přihlašovací jméno"),
-                                    React.createElement('input', { required: true, value: newStudent.login, onChange: e => setNewStudent({...newStudent, login: e.target.value}), className: "w-full p-4 bg-slate-50 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-600" })
-                                ),
-                                React.createElement('div', null,
-                                    React.createElement('label', { className: "text-[10px] font-bold uppercase text-slate-400 ml-2 block mb-1" }, "PIN (Heslo)"),
-                                    React.createElement('input', { required: true, value: newStudent.pin, onChange: e => setNewStudent({...newStudent, pin: e.target.value}), className: "w-full p-4 bg-slate-50 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-600" })
-                                )
-                            ),
-                            React.createElement('div', { className: "grid grid-cols-2 gap-4" },
-                                React.createElement('div', null,
-                                    React.createElement('label', { className: "text-[10px] font-bold uppercase text-slate-400 ml-2 block mb-1" }, "Typ studia"),
-                                    React.createElement('select', { value: newStudent.typStudenta, onChange: e => setNewStudent({...newStudent, typStudenta: e.target.value}), className: "w-full p-4 bg-slate-50 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-600" },
-                                        React.createElement('option', { value: "interni" }, "Interní"),
-                                        React.createElement('option', { value: "externi" }, "Externí")
-                                    )
-                                ),
-                                React.createElement('div', null,
-                                    React.createElement('label', { className: "text-[10px] font-bold uppercase text-slate-400 ml-2 block mb-1" }, "Třída"),
-                                    React.createElement('select', { value: newStudent.mojeTrida, onChange: e => setNewStudent({...newStudent, mojeTrida: e.target.value}), className: "w-full p-4 bg-slate-50 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-600" },
-                                        React.createElement('option', { value: "" }, "Vybrat..."),
-                                        uniqueGrades.map(g => React.createElement('option', { key: g, value: g }, g))
-                                    )
-                                )
-                            ),
-                            React.createElement('div', { className: "grid grid-cols-2 gap-4" },
-                                React.createElement('div', null,
-                                    React.createElement('label', { className: "text-[10px] font-bold uppercase text-slate-400 ml-2 block mb-1" }, "Věk (číslo)"),
-                                    React.createElement('input', { type: "number", value: newStudent.vek, onChange: e => setNewStudent({...newStudent, vek: e.target.value}), className: "w-full p-4 bg-slate-50 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-600" })
-                                ),
-                                React.createElement('div', null,
-                                    React.createElement('label', { className: "text-[10px] font-bold uppercase text-slate-400 ml-2 block mb-1" }, "Kmenová škola"),
-                                    React.createElement('input', { value: newStudent.kmenovaSkola, onChange: e => setNewStudent({...newStudent, kmenovaSkola: e.target.value}), className: "w-full p-4 bg-slate-50 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-600" })
-                                )
-                            ),
-                            React.createElement('div', null,
-                                React.createElement('label', { className: "text-[10px] font-bold uppercase text-slate-400 ml-2 block mb-1" }, "E-mail rodiče (nepovinné)"),
-                                React.createElement('input', { type: "email", value: newStudent.emailRodice, onChange: e => setNewStudent({...newStudent, emailRodice: e.target.value}), className: "w-full p-4 bg-slate-50 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-600" })
-                            ),
-                            React.createElement('button', { type: "submit", className: "w-full bg-blue-600 text-white py-4 rounded-2xl font-bold uppercase shadow-xl hover:bg-blue-700 transition-all mt-4" }, "Vytvořit žáka")
-                        )
-                    )
-                ),
-
-                // UPLOAD MODAL
-                showUploadModal && React.createElement('div', { className: "fixed inset-0 z-50 flex items-center justify-center p-6 modal-overlay", onClick: () => setShowUploadModal(false) },
-                    React.createElement('div', { className: "bg-white rounded-[3.5rem] shadow-2xl w-full max-w-xl p-12 animate-in relative overflow-hidden", onClick: e => e.stopPropagation() },
-                        isUploading && React.createElement('div', { className: "absolute inset-0 bg-white/90 z-20 flex flex-col items-center justify-center text-blue-600 font-bold uppercase text-xs" },
-                             React.createElement(Loader2, { className: "animate-spin w-8 h-8 mb-2" }), " Ukládám podklady..."
-                        ),
-                        React.createElement('div', { className: "flex justify-between items-center mb-8" },
-                            React.createElement('h2', { className: "text-2xl font-bold text-blue-900 uppercase" }, "Nový materiál"),
-                            React.createElement('button', { onClick: () => setShowUploadModal(false), className: "text-slate-300 hover:text-slate-500 transition-all" }, React.createElement(X, { className: "w-8 h-8" }))
-                        ),
-                        React.createElement('form', { onSubmit: handleUploadSubmit, className: "space-y-4 text-sm" },
-                            React.createElement('div', null,
-                                React.createElement('label', { className: "text-[10px] font-bold uppercase text-slate-400 ml-2 block mb-1" }, "Soubor z PC"),
-                                React.createElement('div', { className: "relative" },
-                                    React.createElement('input', { type: "file", onChange: e => setUploadFile(e.target.files ? e.target.files[0] : null), className: "hidden", id: "file-upload" }),
-                                    React.createElement('label', { htmlFor: "file-upload", className: "w-full p-4 bg-slate-50 border border-dashed border-blue-200 rounded-2xl flex items-center justify-center gap-3 text-slate-500 cursor-pointer hover:bg-blue-50 transition-colors" },
-                                        React.createElement(UploadCloud, { className: "w-5 h-5 text-blue-400" }),
-                                        uploadFile ? React.createElement('span', { className: "text-blue-600 font-bold" }, uploadFile.name) : "Vybrat soubor..."
-                                    )
-                                )
-                            ),
-                            React.createElement('div', null, React.createElement('label', { className: "text-[10px] font-bold uppercase text-slate-400 ml-2 block mb-1" }, "Název"), React.createElement('input', { value: uploadMeta.nazev, onChange: e => setUploadMeta({...uploadMeta, nazev: e.target.value}), placeholder: "Co děti uvidí na kartě", required: true, className: "w-full p-4 bg-slate-50 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 transition-all" })),
-                            React.createElement('div', null, React.createElement('label', { className: "text-[10px] font-bold uppercase text-slate-400 ml-2 block mb-1" }, "Popisek / Poznámka"), React.createElement('textarea', { value: uploadMeta.poznamka, onChange: e => setUploadMeta({...uploadMeta, poznamka: e.target.value}), placeholder: "Krátký popis obsahu...", className: "w-full p-4 bg-slate-50 border rounded-2xl h-24 outline-none focus:ring-2 focus:ring-blue-600 transition-all" })),
-                            
-                            React.createElement('div', { className: "grid grid-cols-2 gap-4" },
-                                React.createElement('div', null,
-                                    React.createElement('label', { className: "text-[10px] font-bold uppercase text-slate-400 ml-2 block mb-1" }, "Třída"),
-                                    React.createElement('select', { value: uploadMeta.trida, onChange: e => setUploadMeta({...uploadMeta, trida: e.target.value}), required: true, className: "w-full p-4 bg-slate-50 border rounded-2xl outline-none" },
-                                        React.createElement('option', { value: "", disabled: true }, "Vybrat"),
-                                        React.createElement('option', { value: GENERAL_INFO_LABEL, className: "text-blue-600 font-bold" }, `📌 ${GENERAL_INFO_LABEL} (Školní materiály)`),
-                                        data.config.filter(c => c.kategorie === 'Trida').map(c => c.nazev).sort().map(g => React.createElement('option', { key: g }, g))
-                                    )
-                                ),
-                                uploadMeta.trida !== GENERAL_INFO_LABEL && React.createElement('div', null,
-                                    React.createElement('label', { className: "text-[10px] font-bold uppercase text-slate-400 ml-2 block mb-1" }, "Předmět"),
-                                    React.createElement('select', { value: uploadMeta.predmet, onChange: e => setUploadMeta({...uploadMeta, predmet: e.target.value}), required: true, className: "w-full p-4 bg-slate-50 border rounded-2xl outline-none" },
-                                        React.createElement('option', { value: "", disabled: true }, "Vybrat"),
-                                        uniqueSubjects.filter(s => s !== 'Vše').map(s => React.createElement('option', { key: s }, s))
-                                    )
-                                )
-                            ),
-                             React.createElement('div', { className: "grid grid-cols-2 gap-4" },
-                                uploadMeta.trida !== GENERAL_INFO_LABEL && React.createElement('div', null,
-                                    React.createElement('label', { className: "text-[10px] font-bold uppercase text-slate-400 ml-2 block mb-1" }, "Typ"),
-                                    React.createElement('select', { value: uploadMeta.typ, onChange: e => setUploadMeta({...uploadMeta, typ: e.target.value}), required: true, className: "w-full p-4 bg-slate-50 border rounded-2xl outline-none" },
-                                        React.createElement('option', { value: "", disabled: true }, "Vybrat"),
-                                        data.config.filter(c => c.kategorie === 'Typ').map(t => React.createElement('option', { key: t.nazev }, t.nazev))
-                                    )
-                                ),
-                                React.createElement('div', null,
-                                     React.createElement('label', { className: "text-[10px] font-bold uppercase text-slate-400 ml-2 block mb-1" }, "Cílová skupina"),
-                                     React.createElement('select', { value: uploadMeta.cilovaSkupina, onChange: e => setUploadMeta({...uploadMeta, cilovaSkupina: e.target.value}), className: "w-full p-4 bg-slate-50 border rounded-2xl outline-none" },
-                                        React.createElement('option', { value: "all" }, "Všichni (Interní + Externí)"),
-                                        React.createElement('option', { value: "interni" }, "Pouze Interní"),
-                                        React.createElement('option', { value: "externi" }, "Pouze Externí")
-                                    )
-                                )
-                            ),
-                            React.createElement('div', null, 
-                                React.createElement('label', { className: "text-[10px] font-bold uppercase text-slate-400 ml-2 block mb-1" }, "Tagy (#...)"), 
-                                React.createElement('input', { value: uploadMeta.tagy, onChange: e => setUploadMeta({...uploadMeta, tagy: e.target.value}), list: "tag-suggestions", placeholder: "geometrie, gramatika", className: "w-full p-4 bg-slate-50 border rounded-2xl outline-none" })
-                            ),
-                            
-                            React.createElement('button', { className: "w-full bg-emerald-600 text-white py-5 rounded-[2rem] font-bold uppercase shadow-xl hover:bg-emerald-700 transition-all mt-4 active:scale-95" }, "Publikovat do studovny")
-                        )
-                    )
-                ),
-
-                // EDIT MODAL
-                showEditModal && React.createElement('div', { className: "fixed inset-0 z-50 flex items-center justify-center p-6 modal-overlay", onClick: () => setShowEditModal(null) },
-                    React.createElement('div', { className: "bg-white rounded-[3.5rem] shadow-2xl w-full max-w-xl p-12 animate-in relative max-h-[85vh] overflow-y-auto custom-scroll", onClick: e => e.stopPropagation() },
-                        isUploading && React.createElement('div', { className: "absolute inset-0 bg-white/90 z-20 flex flex-col items-center justify-center text-blue-600 font-bold uppercase text-xs" },
-                             React.createElement(Loader2, { className: "animate-spin w-8 h-8 mb-2" }), " Aktualizuji..."
-                        ),
-                        React.createElement('div', { className: "flex justify-between items-center mb-8 shrink-0" }, React.createElement('h2', { className: "text-2xl font-bold text-blue-900 uppercase" }, "Upravit informace"), React.createElement('button', { onClick: () => setShowEditModal(null), className: "text-slate-300 hover:text-red-500 transition-all" }, React.createElement(X, { className: "w-8 h-8" }))),
-                        React.createElement('form', { onSubmit: handleEditSubmit, className: "space-y-4 text-sm" },
-                            React.createElement('div', null, React.createElement('label', { className: "text-[10px] font-bold uppercase text-slate-400 ml-2 block mb-1" }, "Název materiálu"), React.createElement('input', { value: showEditModal.nazev, onChange: e => setShowEditModal({...showEditModal, nazev: e.target.value}), className: "w-full p-4 bg-slate-50 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 transition-all" })),
-                            React.createElement('div', null, React.createElement('label', { className: "text-[10px] font-bold uppercase text-slate-400 ml-2 block mb-1" }, "Popisek / Poznámka"), React.createElement('textarea', { value: showEditModal.poznamka, onChange: e => setShowEditModal({...showEditModal, poznamka: e.target.value}), className: "w-full p-4 bg-slate-50 border rounded-2xl h-24 outline-none focus:ring-2 focus:ring-blue-600 transition-all" })),
-                             React.createElement('div', { className: "grid grid-cols-2 gap-4" },
-                                React.createElement('div', null,
-                                    React.createElement('label', { className: "text-[10px] font-bold uppercase text-slate-400 ml-2 block mb-1" }, "Třída"),
-                                    React.createElement('select', { value: showEditModal.trida, onChange: e => setShowEditModal({...showEditModal, trida: e.target.value}), className: "w-full p-4 bg-slate-50 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-600" },
-                                        React.createElement('option', { value: GENERAL_INFO_LABEL }, GENERAL_INFO_LABEL),
-                                        data.config.filter(c => c.kategorie === 'Trida').map(c => c.nazev).sort().map(g => React.createElement('option', { key: g }, g))
-                                    )
-                                ),
-                                React.createElement('div', null,
-                                    React.createElement('label', { className: "text-[10px] font-bold uppercase text-slate-400 ml-2 block mb-1" }, "Předmět"),
-                                    React.createElement('select', { value: showEditModal.predmet, onChange: e => setShowEditModal({...showEditModal, predmet: e.target.value}), className: "w-full p-4 bg-slate-50 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-600" },
-                                         uniqueSubjects.filter(s => s !== 'Vše').map(s => React.createElement('option', { key: s }, s))
-                                    )
-                                )
-                            ),
-                            React.createElement('div', { className: "grid grid-cols-2 gap-4" },
-                                React.createElement('div', null,
-                                    React.createElement('label', { className: "text-[10px] font-bold uppercase text-slate-400 ml-2 block mb-1" }, "Typ materiálu"),
-                                    React.createElement('select', { value: showEditModal.typ, onChange: e => setShowEditModal({...showEditModal, typ: e.target.value}), className: "w-full p-4 bg-slate-50 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-600" },
-                                        data.config.filter(c => c.kategorie === 'Typ').map(t => React.createElement('option', { key: t.nazev }, t.nazev))
-                                    )
-                                ),
-                                React.createElement('div', null,
-                                     React.createElement('label', { className: "text-[10px] font-bold uppercase text-slate-400 ml-2 block mb-1" }, "Cílová skupina"),
-                                     React.createElement('select', { value: showEditModal.cilovaSkupina || 'all', onChange: e => setShowEditModal({...showEditModal, cilovaSkupina: e.target.value}), className: "w-full p-4 bg-slate-50 border rounded-2xl outline-none" },
-                                        React.createElement('option', { value: "all" }, "Všichni (Interní + Externí)"),
-                                        React.createElement('option', { value: "interni" }, "Pouze Interní"),
-                                        React.createElement('option', { value: "externi" }, "Pouze Externí")
-                                    )
-                                )
-                            ),
-                            React.createElement('div', null, 
-                                React.createElement('label', { className: "text-[10px] font-bold uppercase text-slate-400 ml-2 block mb-1" }, "Tagy (#...)"), 
-                                React.createElement('input', { value: showEditModal.tagy, onChange: e => setShowEditModal({...showEditModal, tagy: e.target.value}), list: "tag-suggestions", className: "w-full p-4 bg-slate-50 border rounded-2xl text-sm outline-none" })
-                            ),
-                            
-                            React.createElement('div', { className: "pt-4 border-t border-slate-100" },
-                                React.createElement('label', { className: "text-[10px] font-bold uppercase text-red-400 ml-2 block mb-1" }, "Nahradit soubor (Volitelné)"),
-                                React.createElement('div', { className: "relative" },
-                                    React.createElement('input', { type: "file", onChange: e => setEditFile(e.target.files ? e.target.files[0] : null), className: "hidden", id: "file-edit-upload" }),
-                                    React.createElement('label', { htmlFor: "file-edit-upload", className: "w-full p-3 bg-red-50 border border-dashed border-red-200 rounded-2xl flex items-center justify-center gap-3 text-slate-500 cursor-pointer hover:bg-red-100 transition-colors" },
-                                        React.createElement(UploadCloud, { className: "w-4 h-4 text-red-400" }),
-                                        editFile ? React.createElement('span', { className: "text-red-600 font-bold" }, editFile.name) : "Nahrát novou verzi..."
-                                    )
-                                ),
-                                React.createElement('p', { className: "text-[9px] text-slate-400 mt-1 ml-2" }, "Původní soubor zůstane na disku, ale odkaz v kartě se aktualizuje. Vazba na žáky (splněno) zůstane zachována.")
-                            ),
-
-                            React.createElement('button', { className: "w-full bg-blue-600 text-white py-5 rounded-[2rem] font-bold uppercase shadow-xl hover:bg-blue-700 transition-all mt-4" }, "Uložit změny")
                         )
                     )
                 )
